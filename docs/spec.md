@@ -4,7 +4,6 @@
 
 ### Capability: kit-import
 
-
 #### Purpose
 
 Loads the draftable pool — skaters, goalies and NHL teams with their cap hits — from the PoolExpert Draft Kit XLSX before the draft starts.
@@ -51,7 +50,6 @@ The system SHALL refuse an import once at least one pick exists.
 - **THEN** the import is refused and the pool and picks are unchanged
 
 ### Capability: draft-setup
-
 
 #### Purpose
 
@@ -106,7 +104,6 @@ The system SHALL let the host clear all picks after an explicit confirmation, ke
 - **THEN** every box is empty and setup is unlocked
 
 ### Capability: draft-board
-
 
 #### Purpose
 
@@ -169,7 +166,6 @@ The system SHALL run entirely on the host machine without internet access.
 
 ### Capability: pick-rules
 
-
 #### Purpose
 
 Decides whether a player or team can go into a given pooler's box, so illegal picks are blocked before they reach the board.
@@ -224,7 +220,6 @@ The system SHALL state the rule that refused a pick.
 
 ### Capability: player-search
 
-
 #### Purpose
 
 Finds an unpicked player or team quickly when the host fills a box during the live draft.
@@ -272,7 +267,6 @@ The system SHALL show for each result its name, position, NHL team and cap hit, 
 
 ### Capability: roster-view
 
-
 #### Purpose
 
 Shows each pooler's roster in a form that is quick to re-type into PoolExpert, which has no import.
@@ -293,6 +287,114 @@ The system SHALL show the roster view at any time, including partial rosters.
 - **WHEN** Alex has 5 picks
 - **THEN** the roster lists those 5
 
+### Capability: deployment
+
+#### Purpose
+
+Builds and tests every change on GitHub, and publishes the app to an Azure Web App reachable only by the host, alongside the local offline run.
+
+#### ADDED Requirements
+
+##### Requirement: Continuous integration
+The system SHALL build and test the API and lint, typecheck and test the web app on every push and pull request to `main`.
+
+###### Scenario: Pull request checked
+- **WHEN** a pull request targets `main`
+- **THEN** a GitHub Actions run builds and tests both, and a failure marks the pull request red
+
+##### Requirement: Continuous deployment to Azure
+The system SHALL deploy to the Azure Web App on every push to `main` whose build and tests pass.
+
+###### Scenario: Merge deploys
+- **WHEN** a commit lands on `main` and CI passes
+- **THEN** the Azure Web App serves that commit's build
+
+###### Scenario: Red build not deployed
+- **WHEN** CI fails on `main`
+- **THEN** nothing is deployed
+
+##### Requirement: Azure access limited to the host
+The Azure-hosted app SHALL require a login for every page and API call and admit only the host's account.
+
+###### Scenario: Anonymous visitor
+- **WHEN** someone opens the Azure URL without logging in
+- **THEN** they are sent to the login page and see no draft data
+
+###### Scenario: Other account
+- **WHEN** a logged-in account other than the host's opens the Azure URL
+- **THEN** access is denied
+
+##### Requirement: Azure draft persists
+The Azure-hosted draft SHALL survive an app restart and a redeploy.
+
+###### Scenario: Redeploy mid-season
+- **WHEN** picks exist on Azure and a new commit is deployed
+- **THEN** the board shows the same picks
+
+##### Requirement: Local run never needs Azure
+The local run SHALL never need the Azure app; the Azure draft only changes through pushes from the local app (see draft-sync).
+
+###### Scenario: Internet down on draft night
+- **WHEN** the host runs the app locally with no internet
+- **THEN** the draft works fully, regardless of the Azure app
+
+### Capability: draft-sync
+
+#### Purpose
+
+Keeps the Azure app as a read-only mirror of the local draft: the local app pushes every change when online, and drafting never depends on the connection.
+
+#### ADDED Requirements
+
+##### Requirement: Automatic push when online
+The local app SHALL push the full draft to the Azure app within 30 seconds of any change while a connection is available and sync is configured.
+
+###### Scenario: Pick pushed
+- **WHEN** the host makes a pick while online
+- **THEN** the Azure board shows that pick within 30 seconds
+
+##### Requirement: Offline changes pushed later
+The local app SHALL keep working with no connection, mark the draft as pending, and push the latest draft once the connection returns.
+
+###### Scenario: Back online
+- **WHEN** 12 picks are made offline and the connection returns
+- **THEN** the Azure board shows all 12 picks without any host action
+
+##### Requirement: Older snapshot refused
+The Azure app SHALL refuse a pushed draft whose revision is not newer than the one it holds.
+
+###### Scenario: Stale laptop copy
+- **WHEN** Azure holds revision 40 and a push carries revision 35
+- **THEN** the push is refused and Azure keeps revision 40
+
+##### Requirement: Azure is a read-only mirror
+The Azure app SHALL refuse every draft change except a pushed snapshot, and show when it was last updated.
+
+###### Scenario: Edit on Azure
+- **WHEN** the host tries to make a pick on the Azure app
+- **THEN** the change is refused with a message that Azure is a read-only mirror
+
+##### Requirement: Sync status visible locally
+The local app SHALL report the sync state as synced, pending, or failing with its reason, including when the host must log in.
+
+###### Scenario: Login needed
+- **WHEN** the cached login has expired
+- **THEN** the status says login is needed and shows the device-login code, and picks keep working
+
+##### Requirement: Host logs in once
+The local app SHALL authenticate to Azure as the host with a device-code login and reuse the cached login across restarts until it expires.
+
+###### Scenario: Restart keeps login
+- **WHEN** the host logged in yesterday and restarts the local app
+- **THEN** pushes resume without a new login
+
+##### Requirement: Sync is optional
+The local app SHALL behave exactly as without sync when no Azure address is configured.
+
+###### Scenario: No Azure configured
+- **WHEN** no Azure address is set
+- **THEN** no push is attempted and the status reports sync off
+
 ## Brittle and to watch
 
 - **Relative ProjectReference to `X:\nhl-fantasy-draft\src\NhlDraftKit.Core`** — any rename, move or signature change in the old repo (`KitReader.Read`, `Player`, `TeamRow`, `Teams.FromKit`) breaks this build. A fresh clone of this repo alone does not build.
@@ -300,6 +402,11 @@ The system SHALL show the roster view at any time, including partial rosters.
 - **Pool snapshot (design D3)** — picks reference `PoolEntry.Id`; if Id generation changes between versions, an existing `draft.json` loses its picks' links.
 - **Comment-only `.tsx` stubs** — lint/typecheck/test must pass on files with no code; `vitest --passWithNoTests` hides a real "no tests" state once the user starts writing code.
 - **Dev port 5190 hard-coded in two places** (`launchSettings.json`, `vite.config.ts`).
+- **CI checks out the private `nhl-fantasy-draft` side by side** with a token secret; an expired token or a renamed repo turns every run red at checkout.
+- **JSON file + in-process lock assume one Azure instance** — scale-out would corrupt or split the draft.
+- **Every push to `main` deploys and restarts the Azure app** — safe only because restart restores state.
+- **Revision counter in `draft.json`** — Azure trusts it to order snapshots; a reset or a restored old file must never lower it, or every push is refused.
+- **Easy Auth now validates bearer tokens** — allowed audience and the Entra public-client flag are hand-set; a change in the portal silently stops sync (status turns failing).
 
 ## Biggest risks
 
@@ -307,6 +414,9 @@ The system SHALL show the roster view at any time, including partial rosters.
 2. **Draft state lost mid-draft** (crash during write, wrong path, StrictMode double request). Unlikely with atomic replace, catastrophic if it happens. → EC-11.
 3. **Kit next season or this kit's edge rows fail import** (goalie without CapH, team mapping for `Uta`, `Vgk`). Visible at import, before the draft — the cheap time. → EC-1, EC-17.
 4. **Draft night needs internet or two terminals** (dev mode left as only run path, CDN asset). Visible only on the night. → EC-12.
+5. **Azure draft lost on redeploy** (data file written outside `/home`). Likely if the path setting is missed; visible only after a deploy. → EC-24, EC-26.
+6. **Azure app open to anyone** (Easy Auth misconfigured, assignment not required). Public repo makes the URL guessable. → EC-25.
+7. **Sync silently stops** (token expired, audience wrong, stale revision) and Azure shows an old board. Likely at least once; visible only through the sync status. → EC-28, EC-30.
 
 ## Discarded options and why
 
@@ -319,6 +429,12 @@ The system SHALL show the roster view at any time, including partial rosters.
 - **Reusing Core's `DraftSession`** — it is season-prep (ranking, stats sync), not a live draft.
 - **Export file for PoolExpert** — PoolExpert has no documented import; roster view instead.
 - **Re-import / merge mid-draft** — ruled out in intent.
+- **Manual deploy trigger** — user chose deploy on every push to `main`.
+- **Easy Auth "login only to edit" / shared access code** — needs app code; one host device, so login always, host only.
+- **Publish profile for deploy** — basic auth is off by default on new App Services; OIDC instead, no long-lived secret.
+- **Manual export/import sync** — user wants automatic push.
+- **Two-way sync with an Azure database (Cosmos DB / Azure SQL)** — conflict handling and change tracking would outweigh the app; one-way push, no database.
+- **Editable Azure, last push wins** — silently loses Azure-side edits; Azure is a read-only mirror.
 
 ## Exit conditions
 
@@ -344,8 +460,18 @@ The system SHALL show the roster view at any time, including partial rosters.
     { "id": "EC-16", "description": "`dotnet build NhlDraftApp.slnx` exits 0 with no warnings and `dotnet test NhlDraftApp.slnx` passes (build implied).", "verified": false },
     { "id": "EC-17", "description": "Real kit `draftkit  Joueurs gardiens équipes - maj 2026-09-30.xlsx` imported through the running API yields 918 skaters, 93 goalies, 32 teams.", "verified": false },
     { "id": "EC-18", "description": "Complexity is low: no method over ~30 lines, nesting ≤ 3, endpoints only map HTTP ↔ domain (no rule logic in endpoint lambdas), main pick path readable from the endpoint into PickRules without other hops.", "verified": false },
-    { "id": "EC-19", "description": "As lean as possible: no interface unless a test substitutes it with NSubstitute, no repository/mediator layer, no package beyond Core's ClosedXML and the test stack, no setting the specs do not name; clean-code skill audit on the new C# reports no Major finding.", "verified": false },
-    { "id": "EC-20", "description": "Unit tests use xUnit, FluentAssertions and NSubstitute, and every test method is named Method_When_Condition_Should_Expectation (checked by grep over `api/NhlDraftApp.Api.Tests`).", "verified": false }
+    { "id": "EC-19", "description": "As lean as possible: no interface unless a test substitutes it with NSubstitute, no repository/mediator layer, no package beyond Core's ClosedXML, MSAL (+ its cache extension) and the test stack, no setting the specs do not name; clean-code skill audit on the new C# reports no Major finding.", "verified": false },
+    { "id": "EC-20", "description": "Unit tests use xUnit, FluentAssertions and NSubstitute, and every test method is named Method_When_Condition_Should_Expectation (checked by grep over `api/NhlDraftApp.Api.Tests`).", "verified": false },
+    { "id": "EC-21", "description": "GitHub Actions `dotnet` job builds and tests `NhlDraftApp.slnx` on every push and PR to main, with nhl-fantasy-draft checked out side by side; a green run is visible on GitHub.", "verified": false },
+    { "id": "EC-22", "description": "GitHub Actions `web` job runs pnpm lint, typeCheck and test on every push and PR to main; a failing step fails the run.", "verified": false },
+    { "id": "EC-23", "description": "The CI publish artifact contains the API and `wwwroot/index.html` from the built web app.", "verified": false },
+    { "id": "EC-24", "description": "The data file path comes from config `Draft:DataPath` (default under %LOCALAPPDATA%); a test proves the override is used.", "verified": false },
+    { "id": "EC-25", "description": "On Azure, an anonymous request is redirected to login and a non-host account is denied; checked by hand in a private browser window.", "verified": false },
+    { "id": "EC-26", "description": "A push to main with green CI deploys to Azure; picks made on Azure survive an app restart and the next deploy; a red CI run deploys nothing.", "verified": false },
+    { "id": "EC-27", "description": "Push tests pass (fake HTTP handler, substituted token source): a change is pushed; offline changes mark pending and the latest draft is pushed when the connection returns; no Azure address → status off and no push.", "verified": false },
+    { "id": "EC-28", "description": "Mirror tests pass: Azure in mirror mode refuses a snapshot whose revision is not newer (409) and refuses every other write (403 with reason); revision never decreases, including after reset.", "verified": false },
+    { "id": "EC-29", "description": "GET /api/draft reports sync status off, synced, pending or failing with reason and last pushed time; an expired login reports 'login needed' with the device code while picks still succeed.", "verified": false },
+    { "id": "EC-30", "description": "End to end by hand: picks made with the network off appear on the Azure board within a minute of reconnecting, and a restart of the local app keeps the login.", "verified": false }
   ]
 }
 ```
@@ -397,6 +523,24 @@ The system SHALL show the roster view at any time, including partial rosters.
 - [ ] 8.1 Write `README.md` (setup, dev two-terminal run, draft-night single run, Core sibling-folder requirement and commit, frontend is yours); verify commands run as written
 - [ ] 8.2 Import the real 2026-2027 kit through the running API; verify `GET /api/draft` reports 918 skaters, 93 goalies, 32 teams
 
+## 9. CI/CD and Azure
+
+- [ ] 9.1 Add `.github/workflows/ci.yml` `dotnet` job (checkout this repo + private Core repo side by side via `CORE_REPO_TOKEN`, build + test slnx) on push and PR to `main`; verify a green run on GitHub Actions
+- [ ] 9.2 Add `web` job (pnpm install, lint, typeCheck, test) and a publish step that copies `web/dist` into the API publish `wwwroot`; verify a green run and that the publish artifact contains `wwwroot/index.html`
+- [ ] 9.3 * Create Azure resources by hand (Linux App Service F1 .NET 10, app setting `Draft__DataPath=/home/data/draft.json`, Entra app with federated credential for this repo's `main`, Easy Auth require login + assignment required, host only) following README steps; verify the README steps are complete
+- [ ] 9.4 Add deploy job (`needs` CI jobs, push to `main` only, OIDC `azure/login`, `azure/webapps-deploy`); verify a push to `main` deploys and the Azure URL serves the app after login
+- [ ] 9.5 Verify Azure access and persistence: anonymous visit redirected to login, other account denied, picks survive restart and redeploy
+
+## 10. Sync local to Azure mirror
+
+- [ ] 10.1 Add `Revision` to the draft (bumped on every save) and Azure mirror mode (`Sync:Mode=Mirror`: snapshot accepted only if newer, else 409; all other writes 403); verify tests cover the stale-snapshot and edit-on-Azure scenarios
+- [ ] 10.2 Add the local push service (wake on save, bearer token, backoff retry) and sync status in `GET /api/draft`; verify tests with a fake handler and substituted token source cover push, offline-then-back, failing reason and sync off
+- [ ] 10.3 Add MSAL device-code token source with persistent cache; verify a test that an expired login sets status "login needed" with the code while picks still succeed
+- [ ] 10.4 * Configure Entra (expose `access_as_user`, allow public client flows) and Easy Auth allowed audience, documented in README; verify README steps are complete
+- [ ] 10.5 Verify end to end: picks made offline appear on the Azure board within a minute of reconnecting; a restart keeps the login
+
 ## Changelog
 
 - **2026-10-05 — Creation** — written by /build-specs from intent.md.
+- **2026-10-05 — CI/CD and Azure** — added `deployment` capability, EC-21 to EC-26, task group 9 (user request).
+- **2026-10-05 — Sync to Azure** — added `draft-sync` capability (auto-push, read-only mirror), EC-27 to EC-30, task group 10; deployment "independent drafts" requirement reworded (user request).
