@@ -1,6 +1,6 @@
-namespace NhlDraftApp.Api.Drafts;
+using NhlDraftApp.Api.Drafts.Models;
 
-public record NameInput(string Name);
+namespace NhlDraftApp.Api.Drafts;
 
 public record DraftView(Settings Settings, IReadOnlyList<Pooler> Poolers, IReadOnlyList<Pick> Picks, bool Started)
 {

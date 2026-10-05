@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using static NhlDraftApp.Api.Drafts.ChangeResponses;
+using NhlDraftApp.Api.Drafts.Data;
+using NhlDraftApp.Api.Drafts.Models;
 
 namespace NhlDraftApp.Api.Drafts;
 
@@ -8,11 +9,14 @@ namespace NhlDraftApp.Api.Drafts;
 public class DraftController(DraftStore store) : ControllerBase
 {
     [HttpGet]
-    public DraftView Get() => store.Read(DraftView.Of);
+    public DraftView Get() => store.Read();
 
     [HttpPut("settings")]
-    public IResult UpdateSettings(Settings settings) => Respond(store, d => d.UpdateSettings(settings));
+    public ActionResult<DraftView> UpdateSettings(Settings settings) => this.Respond(store, d => d.UpdateSettings(settings));
+
+    [HttpPost("new")]
+    public DraftView StartNew() => store.StartNew();
 
     [HttpPost("reset")]
-    public IResult Reset() => Respond(store, d => d.Reset());
+    public ActionResult<DraftView> Reset() => this.Respond(store, d => d.Reset());
 }

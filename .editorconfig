@@ -52,3 +52,7 @@ dotnet_diagnostic.IDE0011.severity = error
 
 # `var x = new Foo()` rather than `Foo x = new()`
 csharp_style_implicit_object_creation_when_type_is_apparent = false:error
+
+# One type per file, file named after the type
+dotnet_diagnostic.SA1402.severity = error
+dotnet_diagnostic.SA1649.severity = error

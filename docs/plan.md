@@ -28,8 +28,8 @@ The host needs one offline board that tracks every pooler's picks, cap and roste
 
 - **Scope** — `PickRules`, `Snake`, `PoolerTotals`, pick/replace/clear mutations and endpoints, `.http` entries; tests seed an in-memory pool (no XLSX)
 - **Ships alone because** — additive on chunk 1; riskiest logic lands early
-- **Coverage** — unit test per pick-rules and draft-board scenario, endpoint tests (422 `{ reason }`), restart test on the same data file
-- **Specs** — pick-rules: all 6 requirements; draft-board: Board grid, Snake order current pick, Any empty box can be filled, Replace or clear a pick, Pooler totals, Draft survives restarts
+- **Coverage** — unit test per pick-rules and draft-board scenario, endpoint tests (422 ProblemDetails), restart test on the same data file
+- **Specs** — pick-rules: all 6 requirements; draft-setup: Settings change mid-draft (from PR #8 review); draft-board: Board grid, Snake order current pick, Any empty box can be filled, Replace or clear a pick, Pooler totals, Draft survives restarts
 - **Risk / brittle** — Risk 1 (reachability corner cases: replacing a G/Team/D box, last round); visible as a refused legal pick or accepted illegal one in tests
 - **Exit conditions** — EC-5, EC-6, EC-7, EC-8, EC-9, EC-10, EC-11
 
@@ -39,7 +39,7 @@ The host needs one offline board that tracks every pooler's picks, cap and roste
 - **Ships alone because** — one additive endpoint; isolates the brittle cross-repo seam in its own PR
 - **Coverage** — tests with an XLSX built in-test via ClosedXML; manual import of the real 2026-2027 kit (918 / 93 / 32); green Actions run with Core checked out
 - **Specs** — kit-import: Import Draft Kit, Missing cap hit counts as zero, Teams have no cap hit, Reject unreadable kit, Import only before the draft starts
-- **Risk / brittle** — relative ProjectReference, `KitReader` owned by the other app, pool entry Id stability in `draft.json`, Risk 3 (kit edge rows), CI token for the private Core repo
+- **Risk / brittle** — relative ProjectReference, `KitReader` owned by the other app, pool entry Id stability in saved draft files, Risk 3 (kit edge rows), CI token for the private Core repo
 - **Exit conditions** — EC-1, EC-2, EC-17 (EC-21 extended: Core checked out)
 
 ### 5. Add player search and the roster view ([#5](https://github.com/obrousseau1/nhl-draft-app/issues/5))
@@ -53,7 +53,7 @@ The host needs one offline board that tracks every pooler's picks, cap and roste
 
 ### 6. Deploy to Azure App Service ([#6](https://github.com/obrousseau1/nhl-draft-app/issues/6))
 
-- **Scope** — CI `deploy` job (needs CI jobs, push to `main` only, OIDC `azure/login`, `azure/webapps-deploy`), README "Deploy to Azure" section; Azure resources created by hand* (Linux App Service F1 .NET 10, `Draft__DataPath=/home/data/draft.json`, Entra app + federated credential, Easy Auth login always, assignment required, host only)
+- **Scope** — CI `deploy` job (needs CI jobs, push to `main` only, OIDC `azure/login`, `azure/webapps-deploy`), README "Deploy to Azure" section; deploy job guarded `if: github.ref == 'refs/heads/main'` (CI runs on every branch); Azure resources created by hand* (Linux App Service F1 .NET 10, `Draft__DataFolder=/home/data`, `AllowedHosts=<app>.azurewebsites.net`, Entra app + federated credential, Easy Auth login always, assignment required, host only)
 - **Ships alone because** — adds a job; local run and CI unaffected
 - **Coverage** — push to `main` deploys; manual checks: anonymous visit → login, other account denied, picks survive restart and redeploy, red CI deploys nothing
 - **Specs** — deployment: Continuous deployment to Azure, Azure access limited to the host, Azure draft persists, Local run never needs Azure
@@ -83,3 +83,4 @@ EC-16 (build + tests), EC-18 (complexity), EC-19 (lean + clean-code audit), EC-2
 - **2026-10-05 — CI/CD and Azure** — CI added to chunks 1, 2, 4; new chunk 6 (Azure deploy); EC-21 to EC-26 assigned.
 - **2026-10-05 — Sync to Azure** — new chunk 7 (one-way push, read-only mirror); EC-27 to EC-30 assigned.
 - **2026-10-05 — Build, shred 1** — built as planned; `Pick` record exists already (needed for the lock), pool entries left to chunks 3 and 4.
+- **2026-10-05 — PR #8 review** — chunk 1 grew: same-origin write guard, AllowedHosts, IDraftFile driver, one file per draft + `POST /api/draft/new`, MaxPoolers, ProblemDetails errors, CI on every branch push. Chunk 3 gains "Settings change mid-draft"; chunk 6 gains the `main` deploy guard and `AllowedHosts`/`Draft__DataFolder` app settings.

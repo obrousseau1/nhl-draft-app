@@ -58,25 +58,37 @@ Lets the host configure a draft before it starts: who drafts, in which order, fo
 #### ADDED Requirements
 
 ##### Requirement: Draft settings with defaults
-The system SHALL let the host set the number of rounds, the salary cap, the defensemen minimum, the goalie count and the team count, defaulting to 20 rounds, 104 M$, 2, 2 and 2.
+The system SHALL let the host set the number of rounds, the salary cap, the defensemen minimum, the goalie count, the team count and the maximum number of poolers, defaulting to 20 rounds, 104 M$, 2, 2, 2 and 12.
 
 ###### Scenario: Fresh draft defaults
 - **WHEN** a new draft is created
-- **THEN** settings are 20 rounds, 104 M$ cap, D minimum 2, goalies 2, teams 2
+- **THEN** settings are 20 rounds, 104 M$ cap, D minimum 2, goalies 2, teams 2, max poolers 12
 
 ##### Requirement: Settings are consistent
-The system SHALL reject settings where the D minimum plus the goalie count plus the team count exceeds the number of rounds, where any value is negative, or where rounds or cap is zero.
+The system SHALL reject settings where rounds are outside 1–50, the cap is outside (0, 1000] M$, the D minimum, goalie or team count is outside 0–rounds, their sum exceeds the rounds, or max poolers is outside 2–30 or below the poolers already added.
 
 ###### Scenario: Too many required picks
 - **WHEN** the host sets 5 rounds with D 2, G 2, teams 2
 - **THEN** the settings are rejected with a message
 
+###### Scenario: Overflowing count
+- **WHEN** the host sets D minimum to the largest integer and goalies to 1
+- **THEN** the settings are rejected
+
+###### Scenario: Boundaries accepted
+- **WHEN** the host sets 50 rounds, a 1000 M$ cap, or D + goalies + teams equal to the rounds
+- **THEN** the settings are applied
+
 ##### Requirement: Poolers
-The system SHALL let the host add, remove and rename poolers; names MUST be non-empty and unique.
+The system SHALL let the host add, remove and rename poolers; names MUST be non-empty, at most 40 characters and unique ignoring case, and adding SHALL be refused once the maximum number of poolers is reached.
 
 ###### Scenario: Duplicate name
-- **WHEN** the host adds a pooler named like an existing one
-- **THEN** the change is rejected
+- **WHEN** Alex exists and the host adds "alex"
+- **THEN** the change is rejected with "Alex is already in the pooler list."
+
+###### Scenario: Pooler limit reached
+- **WHEN** max poolers is 12, 12 poolers exist and the host adds Max
+- **THEN** the change is rejected with "Cannot add Max: the pooler limit of 12 is reached."
 
 ##### Requirement: Draft order
 The system SHALL let the host shuffle the pooler order randomly or reorder poolers manually; the order is round 1's pick order.
@@ -86,15 +98,26 @@ The system SHALL let the host shuffle the pooler order randomly or reorder poole
 - **THEN** the board shows the 12 poolers in a new random order
 
 ##### Requirement: Setup locked once the draft starts
-The system SHALL refuse changes to rounds, cap, counts, pooler list and order once at least one pick exists; renaming a pooler SHALL stay allowed.
+The system SHALL refuse changes to the pooler list and order once at least one pick exists; renaming a pooler SHALL stay allowed. Settings changes after the first pick follow "Settings change mid-draft".
 
-###### Scenario: Change rounds mid-draft
-- **WHEN** a pick exists and the host changes rounds
-- **THEN** the change is refused
+###### Scenario: Add pooler mid-draft
+- **WHEN** a pick exists and the host adds a pooler
+- **THEN** the change is refused, saying the setup is locked, renaming is allowed and reset clears all picks
 
 ###### Scenario: Rename mid-draft
 - **WHEN** a pick exists and the host renames a pooler
 - **THEN** the name changes and picks are kept
+
+##### Requirement: Settings change mid-draft
+The system SHALL accept a settings change after the first pick only when every existing pick still fits: rounds at or above the last filled round, each pooler's cap used within the new cap, goalies and teams picked within the new counts, and the picks still needed reachable; otherwise it SHALL refuse with the reason.
+
+###### Scenario: Cap fixed after 10 rounds
+- **WHEN** 10 rounds are drafted under a 100 M$ cap, every pooler used at most 60 M$, and the host sets the cap to 104 M$
+- **THEN** the cap changes and all picks are kept
+
+###### Scenario: Change that breaks a pick
+- **WHEN** a pooler already has 2 goalies and the host sets the goalie count to 1
+- **THEN** the change is refused with the reason
 
 ##### Requirement: Reset draft
 The system SHALL let the host clear all picks after an explicit confirmation, keeping settings, poolers and the imported pool.
@@ -102,6 +125,13 @@ The system SHALL let the host clear all picks after an explicit confirmation, ke
 ###### Scenario: Reset
 - **WHEN** the host confirms reset
 - **THEN** every box is empty and setup is unlocked
+
+##### Requirement: Start a new draft
+The system SHALL let the host start a new draft that keeps the current settings and poolers with no picks, saved separately so the previous draft stays untouched; the newest draft opens at startup.
+
+###### Scenario: Next season
+- **WHEN** last season's draft is complete and the host starts a new draft
+- **THEN** the board shows the same poolers and settings with empty boxes, and last season's draft is still saved
 
 ### Capability: draft-board
 
@@ -444,7 +474,7 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
   "exitConditions": [
     { "id": "EC-1", "description": "Kit import tests pass: skaters, goalies and teams loaded; `°` stripped; missing CapH → 0 with NoCapHit; teams cap 0; bad file refused naming the missing column with pool unchanged.", "verified": false },
     { "id": "EC-2", "description": "Import after a pick is refused (409) and pool and picks are unchanged, shown by an endpoint test.", "verified": false },
-    { "id": "EC-3", "description": "Setup tests pass: defaults 20 / 104 / 2 / 2 / 2; inconsistent settings rejected; duplicate or empty pooler name rejected; shuffle and manual reorder change round-1 order.", "verified": true },
+    { "id": "EC-3", "description": "Setup tests pass: defaults 20 / 104 / 2 / 2 / 2 / 12 poolers; out-of-range or overflowing settings rejected and boundaries accepted; empty, over-40-character or duplicate pooler names rejected with a message naming the existing pooler; adding past max poolers rejected; shuffle and manual reorder change round-1 order.", "verified": true },
     { "id": "EC-4", "description": "Setup lock tests pass: rounds, cap, counts, poolers and order refused after a pick (409); rename still allowed; reset clears picks only and unlocks setup.", "verified": true },
     { "id": "EC-5", "description": "Board state test: GET /api/draft returns one row per pooler in order, one box per round, filled boxes carrying name, position, NHL team and cap hit.", "verified": false },
     { "id": "EC-6", "description": "Snake tests pass: round 2 reverses order, a skipped earlier box stays current, an out-of-turn pick is saved without moving the current pick.", "verified": false },
@@ -462,16 +492,19 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
     { "id": "EC-18", "description": "Complexity is low: no method over ~30 lines, nesting ≤ 3, controller actions only map HTTP ↔ domain (no rule logic in controllers), main pick path readable from the controller action into PickRules without other hops.", "verified": false },
     { "id": "EC-19", "description": "As lean as possible: no interface unless a test substitutes it with NSubstitute, no repository/mediator layer, no package beyond Core's ClosedXML, MSAL (+ its cache extension) and the test stack, no setting the specs do not name; clean-code skill audit on the new C# reports no Major finding.", "verified": false },
     { "id": "EC-20", "description": "Unit tests use xUnit, FluentAssertions and NSubstitute, and every test method is named Method_When_Condition_Should_Expectation with an underscore between each of the 5 sections, and repeated test values are private constants or fields (checked by grep `_When_[A-Za-z]+_Should_` over `api/NhlDraftApp.Api.Tests`).", "verified": false },
-    { "id": "EC-21", "description": "GitHub Actions `dotnet` job builds and tests `NhlDraftApp.slnx` on every push and PR to main, with nhl-fantasy-draft checked out side by side; a green run is visible on GitHub.", "verified": false },
+    { "id": "EC-21", "description": "GitHub Actions `dotnet` job builds and tests `NhlDraftApp.slnx` on every push and PR to main, with nhl-fantasy-draft checked out side by side; a green run is visible on GitHub.", "verified": true },
     { "id": "EC-22", "description": "GitHub Actions `web` job runs pnpm lint, typeCheck and test on every push and PR to main; a failing step fails the run.", "verified": false },
     { "id": "EC-23", "description": "The CI publish artifact contains the API and `wwwroot/index.html` from the built web app.", "verified": false },
-    { "id": "EC-24", "description": "The data file path comes from config `Draft:DataPath` (default under %LOCALAPPDATA%); a test proves the override is used.", "verified": true },
+    { "id": "EC-24", "description": "Draft files live in config `Draft:DataFolder` (default `%LOCALAPPDATA%/NhlDraftApp`); endpoint tests prove the override is used.", "verified": true },
     { "id": "EC-25", "description": "On Azure, an anonymous request is redirected to login and a non-host account is denied; checked by hand in a private browser window.", "verified": false },
     { "id": "EC-26", "description": "A push to main with green CI deploys to Azure; picks made on Azure survive an app restart and the next deploy; a red CI run deploys nothing.", "verified": false },
     { "id": "EC-27", "description": "Push tests pass (fake HTTP handler, substituted token source): a change is pushed; offline changes mark pending and the latest draft is pushed when the connection returns; no Azure address → status off and no push.", "verified": false },
     { "id": "EC-28", "description": "Mirror tests pass: Azure in mirror mode refuses a snapshot whose revision is not newer (409) and refuses every other write (403 with reason); revision never decreases, including after reset.", "verified": false },
     { "id": "EC-29", "description": "GET /api/draft reports sync status off, synced, pending or failing with reason and last pushed time; an expired login reports 'login needed' with the device code while picks still succeed.", "verified": false },
-    { "id": "EC-30", "description": "End to end by hand: picks made with the network off appear on the Azure board within a minute of reconnecting, and a restart of the local app keeps the login.", "verified": false }
+    { "id": "EC-30", "description": "End to end by hand: picks made with the network off appear on the Azure board within a minute of reconnecting, and a restart of the local app keeps the login.", "verified": false },
+    { "id": "EC-31", "description": "Browser guards: a non-GET request with a foreign or unreadable Origin gets 403 ProblemDetails and changes nothing; a Host other than localhost/127.0.0.1 gets 400 (SameOriginWritesTests, AllowedHostsTests).", "verified": true },
+    { "id": "EC-32", "description": "One file per draft: saves go to draft-<timestamp>.json, the newest loads at startup, POST /api/draft/new keeps settings and poolers with no picks in a new file and leaves the previous file untouched; a failed save leaves memory unchanged; an unreadable file is set aside as .corrupt-<timestamp> (DraftFileTests, DraftStoreTests, endpoint test).", "verified": true },
+    { "id": "EC-33", "description": "Settings change mid-draft: accepted when every existing pick still fits, refused with the reason otherwise (tests for each 'Settings change mid-draft' scenario).", "verified": false }
   ]
 }
 ```
@@ -500,6 +533,7 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
 - [ ] 4.1 Implement `PickRules.Check` (owner, cap with replacement, G/Team maxima, D beyond minimum, reachability, reason text); verify tests cover every `pick-rules` scenario
 - [ ] 4.2 Implement `Snake.Current` and `PoolerTotals.Of`; verify tests cover round-2 reversal, skipped box, out-of-turn pick and the totals scenario (88.0 / 5.5 / 1 / 2 / 2)
 - [ ] 4.3 Add pick, replace, clear mutations using `PickRules`; verify tests for clear returning the player to the pool and refused picks leaving state unchanged
+- [ ] 4.4 Allow settings changes after the first pick when existing picks still fit (rounds ≥ last filled round, cap used ≤ new cap, G/T picked ≤ new counts, needs reachable); verify tests cover the "Settings change mid-draft" scenarios
 
 ## 5. Search and roster
 
@@ -527,8 +561,8 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
 
 - [ ] 9.1 Add `.github/workflows/ci.yml` `dotnet` job (checkout this repo + private Core repo side by side via `CORE_REPO_TOKEN`, build + test slnx) on push and PR to `main`; verify a green run on GitHub Actions
 - [ ] 9.2 Add `web` job (pnpm install, lint, typeCheck, test) and a publish step that copies `web/dist` into the API publish `wwwroot`; verify a green run and that the publish artifact contains `wwwroot/index.html`
-- [ ] 9.3 * Create Azure resources by hand (Linux App Service F1 .NET 10, app setting `Draft__DataPath=/home/data/draft.json`, Entra app with federated credential for this repo's `main`, Easy Auth require login + assignment required, host only) following README steps; verify the README steps are complete
-- [ ] 9.4 Add deploy job (`needs` CI jobs, push to `main` only, OIDC `azure/login`, `azure/webapps-deploy`); verify a push to `main` deploys and the Azure URL serves the app after login
+- [ ] 9.3 * Create Azure resources by hand (Linux App Service F1 .NET 10, app settings `Draft__DataFolder=/home/data` and `AllowedHosts=<app>.azurewebsites.net`, Entra app with federated credential for this repo's `main`, Easy Auth require login + assignment required, host only) following README steps; verify the README steps are complete
+- [ ] 9.4 Add deploy job (`needs` CI jobs, `if: github.ref == 'refs/heads/main'` since CI runs on every branch, OIDC `azure/login`, `azure/webapps-deploy`); verify a push to `main` deploys and the Azure URL serves the app after login
 - [ ] 9.5 Verify Azure access and persistence: anonymous visit redirected to login, other account denied, picks survive restart and redeploy
 
 ## 10. Sync local to Azure mirror
@@ -546,3 +580,5 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
 - **2026-10-05 — Sync to Azure** — added `draft-sync` capability (auto-push, read-only mirror), EC-27 to EC-30, task group 10; deployment "independent drafts" requirement reworded (user request).
 - **2026-10-05 — Build, shred 1** — EC-3, EC-4, EC-24 verified (36 tests green, 0 warnings). EC-21 written (`.github/workflows/ci.yml`) but unverified until the branch is pushed and a run goes green. Setup refusals return 400 `{ reason }` (invalid), 409 (locked), 404 (unknown pooler); 422 stays reserved for pick refusals. NSubstitute is used to substitute `Random` for the shuffle.
 - **2026-10-05 — Build, shred 1** — endpoints moved from minimal API to `[ApiController]` controllers (user decision); routes, status codes and bodies unchanged, EC-18 reworded. Malformed JSON bodies now get ProblemDetails 400 from `[ApiController]`; domain refusals keep `{ reason }`.
+- **2026-10-05 — Build, shred 1** — EC-21 verified: GitHub Actions `dotnet` job green on PR run for 5906c84 (controllers commit). Core side-by-side checkout still to add in chunk 4.
+- **2026-10-05 — PR #8 review** — draft-setup spec revised: max poolers (default 12, 2–30), settings bounds, exact refusal messages, "Settings change mid-draft" (moved to chunk 3, EC-33), "Start a new draft" (one file per draft). Errors are now ProblemDetails, not `{ reason }`. EC-3 and EC-24 reworded; EC-31 (browser guards) and EC-32 (per-draft files, save-then-swap, corrupt-file recovery) added and verified (79 tests green, 0 warnings).

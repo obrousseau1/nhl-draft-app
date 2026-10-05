@@ -1,15 +1,12 @@
 using System.Runtime.InteropServices;
+using NhlDraftApp.Api.Drafts.Models;
 
 namespace NhlDraftApp.Api.Drafts;
 
-public record Pooler(Guid Id, string Name);
-
-public record Pick(Guid PoolerId, int Round, string EntryId);
-
-public record DraftData(Settings Settings, List<Pooler> Poolers, List<Pick> Picks);
-
 public class Draft(DraftData? data = null)
 {
+    public const int MaxNameLength = 40;
+
     private readonly List<Pooler> poolers = data?.Poolers.ToList() ?? [];
     private readonly List<Pick> picks = data?.Picks.ToList() ?? [];
 
@@ -26,6 +23,8 @@ public class Draft(DraftData? data = null)
             return Change.Locked;
         if (settings.Problem() is { } problem)
             return Change.Invalid(problem);
+        if (settings.MaxPoolers < poolers.Count)
+            return Change.Invalid($"Maximum poolers cannot be below the {poolers.Count} poolers already added.");
         Settings = settings;
         return Change.Ok;
     }
@@ -34,6 +33,8 @@ public class Draft(DraftData? data = null)
     {
         if (Started)
             return Change.Locked;
+        if (poolers.Count >= Settings.MaxPoolers)
+            return Change.Invalid($"Cannot add {name.Trim()}: the pooler limit of {Settings.MaxPoolers} is reached.");
         if (NameProblem(name, null) is { } problem)
             return Change.Invalid(problem);
         poolers.Add(new Pooler(Guid.NewGuid(), name.Trim()));
@@ -92,8 +93,9 @@ public class Draft(DraftData? data = null)
         var trimmed = name.Trim();
         if (trimmed.Length == 0)
             return "Pooler name cannot be empty.";
-        if (poolers.Any(p => p.Id != self && string.Equals(p.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
-            return $"A pooler named {trimmed} already exists.";
-        return null;
+        if (trimmed.Length > MaxNameLength)
+            return $"Pooler name cannot be longer than {MaxNameLength} characters.";
+        var existing = poolers.Find(p => p.Id != self && string.Equals(p.Name, trimmed, StringComparison.OrdinalIgnoreCase));
+        return existing is null ? null : $"{existing.Name} is already in the pooler list.";
     }
 }

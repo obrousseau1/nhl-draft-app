@@ -38,13 +38,13 @@ Empty repo. Motivation and scope: see `proposal.md` and `docs/intent.md`. Requir
 - reachable: `max(0, dMin − D) + (goalies − G) + (teams − T) ≤ emptyBoxes` after the pick.
 "Eligible only" search runs `PickRules.Check` per candidate (≈1 050 entries, trivial).
 
-**D6 — Persistence: one JSON file, atomic write.** `%LOCALAPPDATA%\NhlDraftApp\draft.json` (path read from config `Draft:DataPath`; tests and Azure override it — Azure uses `/home/data/draft.json`, the only persisted folder). Write to `draft.json.tmp` then `File.Move(overwrite: true)` after every mutation; load at startup. One draft at a time. *Alt:* SQLite/EF — rejected, a 100 KB document with no queries. A single in-process lock serialises mutations (one host, but React StrictMode double calls exist).
+**D6 — Persistence: one JSON file per draft, atomic write.** `IDraftFile` (`DraftFile`) owns JSON and file I/O; `DraftStore` owns the lock and copy-change-save-swap (memory changes only after a successful save). Files are `draft-<yyyyMMdd-HHmmss-fff>.json` in config `Draft:DataFolder` (default `%LOCALAPPDATA%NhlDraftApp`; Azure `/home/data`); the newest loads at startup, `POST /api/draft/new` starts a new file keeping settings and poolers. Write to `.tmp` then `File.Move(overwrite: true)`. An unreadable file is renamed `.corrupt-<timestamp>`, logged, and the app starts empty. *Alt:* SQLite/EF — rejected, a 100 KB document with no queries; one fixed `draft.json` — rejected, next draft would clobber the previous one (review).
 
 **D7 — Offline "draft night" mode.** `pnpm build` outputs to `web/dist`; the API serves it via `UseStaticFiles` + `MapFallbackToFile("index.html")` from a configured path. Dev keeps Vite on its port with `/api` proxy to `http://localhost:5190`. No CDN fonts or scripts in `index.html`.
 
-**D8 — HTTP contract** (all JSON; refusals = 422 `{ reason }`; locked setup/import = 409 `{ reason }`):
+**D8 — HTTP contract** (all JSON; writes return 200 with the draft; every error is ProblemDetails `application/problem+json` with the message in `detail`: invalid 400, unknown 404, locked 409, pick refused 422, cross-site write 403):
 - `GET /api/draft` → settings, poolers (order), picks, per-pooler totals, current pick, pool size, `started`.
-- `PUT /api/draft/settings`, `POST /api/poolers`, `PUT /api/poolers/{id}` (rename), `DELETE /api/poolers/{id}`, `PUT /api/poolers/order`, `POST /api/poolers/shuffle`, `POST /api/draft/reset`.
+- `POST /api/draft/new`, `PUT /api/draft/settings`, `POST /api/poolers`, `PUT /api/poolers/{id}` (rename), `DELETE /api/poolers/{id}`, `PUT /api/poolers/order`, `POST /api/poolers/shuffle`, `POST /api/draft/reset`.
 - `POST /api/kit` (multipart file).
 - `GET /api/pool?q=&position=&team=&pooler=&round=&eligibleOnly=`.
 - `PUT /api/picks/{poolerId}/{round}` `{ entryId }`, `DELETE /api/picks/{poolerId}/{round}`.
@@ -61,13 +61,15 @@ Documented with examples in `api/NhlDraftApp.Api/NhlDraftApp.Api.http`.
 
 **D13 — Publish bundles the web app.** CI builds `web/dist` and copies it into the API publish output's `wwwroot`; D7's static hosting serves `wwwroot` when present. One artifact, same for local "draft night" and Azure.
 
-**D14 — CD to Azure App Service on push to `main`.** Deploy job `needs` both CI jobs, runs only on push to `main`, logs in with OIDC (`azure/login`, federated credential; no publish profile — basic auth is off by default on new apps), deploys with `azure/webapps-deploy`. Target: Linux App Service, .NET 10, F1 (free; cold start acceptable), single instance. App setting `Draft__DataPath=/home/data/draft.json`. User decision: every push to `main`.
+**D14 — CD to Azure App Service on push to `main`.** Deploy job `needs` both CI jobs, runs only on push to `main`, logs in with OIDC (`azure/login`, federated credential; no publish profile — basic auth is off by default on new apps), deploys with `azure/webapps-deploy`. Target: Linux App Service, .NET 10, F1 (free; cold start acceptable), single instance. App settings `Draft__DataFolder=/home/data` and `AllowedHosts=<app>.azurewebsites.net` (local default is `localhost;127.0.0.1`). The deploy job runs only on `main` (`if: github.ref == 'refs/heads/main'`) since CI runs on every branch push. User decision: every push to `main`.
 
 **D15 — Azure access via Easy Auth, login always, host only.** App Service Authentication, Microsoft provider, "require authentication" on all requests, Entra enterprise app with "assignment required" and only the host assigned. No app code. Configured once by hand, documented in README. *Alt:* login only to edit (identity check in API) and shared access code — rejected; one host device.
 
 **D16 — One-way sync: local pushes snapshots, Azure mirrors.** User decision (auto-push, read-only mirror). Each saved change bumps `Revision` in `draft.json`. Local: a `BackgroundService` wakes on save, and `PUT /api/sync/snapshot` `{ revision, draft }` to `Sync:AzureUrl` with a bearer token; on failure it retries with backoff (5 s → 5 min) and status = pending/failing. Azure (`Sync:Mode=Mirror`): accepts a snapshot only if `revision` > held revision (else 409), refuses every other write with 403 `{ reason }`. Status (`off | synced | pending | failing`, reason, device code, last pushed at) is part of `GET /api/draft`. No database: Azure keeps the same JSON file under `/home`. *Alt:* manual export/import (user preferred automatic), two-way merge + Cosmos/SQL (conflict handling dwarfs the app), editable Azure with last push wins (silent loss).
 
 **D17 — Sync auth: MSAL device code through Easy Auth.** Local app is an MSAL public client (`Microsoft.Identity.Client` + `.Extensions.Msal` for a DPAPI-protected token cache) requesting `api://<clientId>/access_as_user`. Entra app: expose that scope, allow public client flows; Easy Auth "allowed token audiences" includes `api://<clientId>`. Assignment-required still restricts to the host. Device code shown via sync status. `ITokenSource` and the snapshot `HttpClient` are seams NSubstitute / a fake handler substitute in tests (allowed by EC-19).
+
+**D18 — Browser-attack guards on the local API.** `UseSameOriginWrites` refuses non-GET requests whose `Origin` differs from `Host` (403 ProblemDetails): body-less POSTs skip CORS preflight, so any site could otherwise reset the draft. `AllowedHosts` restricts `Host` to `localhost;127.0.0.1` (400) against DNS rebinding. No app-level auth locally: Kestrel listens on loopback only.
 
 ## Risks / Trade-offs
 
@@ -88,7 +90,7 @@ Documented with examples in `api/NhlDraftApp.Api/NhlDraftApp.Api.http`.
 
 ## Migration Plan
 
-New app; nothing to migrate. Rollback = delete `draft.json`.
+New app; nothing to migrate. Rollback = delete the `draft-*.json` files.
 
 ## Open Questions
 

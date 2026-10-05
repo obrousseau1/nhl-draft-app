@@ -1,21 +1,25 @@
+using Microsoft.AspNetCore.Mvc;
+using NhlDraftApp.Api.Drafts.Data;
+using NhlDraftApp.Api.Drafts.Models;
+
 namespace NhlDraftApp.Api.Drafts;
 
 public static class ChangeResponses
 {
-    public static IResult Respond(DraftStore store, Func<Draft, Change> change)
+    public static ActionResult<DraftView> Respond(this ControllerBase controller, DraftStore store, Func<Draft, Change> change)
     {
-        var result = store.Apply(change);
-        return result.Status == ChangeStatus.Ok ? Results.Ok(store.Read(DraftView.Of)) : Refusal(result);
+        var applied = store.Apply(change);
+        return applied.Change.Status == ChangeStatus.Ok ? controller.Ok(applied.View) : controller.Refusal(applied.Change);
     }
 
-    public static IResult Refusal(Change change)
+    private static ObjectResult Refusal(this ControllerBase controller, Change change)
     {
-        var body = new { reason = change.Reason };
-        return change.Status switch
+        var status = change.Status switch
         {
-            ChangeStatus.Locked => Results.Conflict(body),
-            ChangeStatus.NotFound => Results.NotFound(body),
-            _ => Results.BadRequest(body),
+            ChangeStatus.Locked => StatusCodes.Status409Conflict,
+            ChangeStatus.NotFound => StatusCodes.Status404NotFound,
+            _ => StatusCodes.Status400BadRequest,
         };
+        return controller.Problem(detail: change.Reason, statusCode: status);
     }
 }
