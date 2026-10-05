@@ -1,4 +1,4 @@
-namespace NhlDraftApp.Api.Drafts;
+namespace NhlDraftApp.Api.Drafts.Models;
 
 public record Change(ChangeStatus Status, string? Reason = null)
 {

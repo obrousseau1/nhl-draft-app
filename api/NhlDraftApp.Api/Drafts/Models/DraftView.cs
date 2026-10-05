@@ -1,6 +1,6 @@
 using NhlDraftApp.Api.Drafts.Models;
 
-namespace NhlDraftApp.Api.Drafts;
+namespace NhlDraftApp.Api.Drafts.Models;
 
 public record DraftView(Settings Settings, IReadOnlyList<Pooler> Poolers, IReadOnlyList<Pick> Picks, bool Started)
 {
