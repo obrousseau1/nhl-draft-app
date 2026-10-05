@@ -39,9 +39,7 @@ public sealed class DraftEndpointsTests : IDisposable
         client?.Dispose();
         factory.Dispose();
         if (Directory.Exists(folder))
-        {
             Directory.Delete(folder, recursive: true);
-        }
     }
 
     private record PoolerBody(Guid Id, string Name);
@@ -53,7 +51,7 @@ public sealed class DraftEndpointsTests : IDisposable
     [Fact]
     public async Task GetDraft_When_New_Should_ReturnDefaultsNotStarted()
     {
-        DraftBody draft = await GetDraft();
+        var draft = await GetDraft();
 
         draft.Settings.Should().Be(new Settings());
         draft.Poolers.Should().BeEmpty();
@@ -63,7 +61,7 @@ public sealed class DraftEndpointsTests : IDisposable
     [Fact]
     public async Task PostPooler_When_Valid_Should_ReturnCreatedAndSaveToConfiguredPath()
     {
-        HttpResponseMessage response = await AddPooler(Alex);
+        var response = await AddPooler(Alex);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         File.ReadAllText(FilePath).Should().Contain(Alex);
@@ -74,7 +72,7 @@ public sealed class DraftEndpointsTests : IDisposable
     {
         await AddPooler(Alex);
 
-        HttpResponseMessage response = await AddPooler(Alex.ToLowerInvariant());
+        var response = await AddPooler(Alex.ToLowerInvariant());
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await Reason(response)).Should().Contain("already exists");
@@ -83,7 +81,7 @@ public sealed class DraftEndpointsTests : IDisposable
     [Fact]
     public async Task PutSettings_When_Valid_Should_ReturnUpdatedDraft()
     {
-        HttpResponseMessage response = await Client.PutAsJsonAsync(SettingsRoute, CustomSettings);
+        var response = await Client.PutAsJsonAsync(SettingsRoute, CustomSettings);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<DraftBody>())!.Settings.Should().Be(CustomSettings);
@@ -94,7 +92,7 @@ public sealed class DraftEndpointsTests : IDisposable
     {
         SeedStartedDraft();
 
-        HttpResponseMessage response = await Client.PutAsJsonAsync(SettingsRoute, CustomSettings);
+        var response = await Client.PutAsJsonAsync(SettingsRoute, CustomSettings);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await Reason(response)).Should().NotBeNullOrWhiteSpace();
@@ -104,9 +102,9 @@ public sealed class DraftEndpointsTests : IDisposable
     public async Task PutPooler_When_DraftStarted_Should_Rename()
     {
         SeedStartedDraft();
-        Guid id = (await GetDraft()).Poolers[0].Id;
+        var id = (await GetDraft()).Poolers[0].Id;
 
-        HttpResponseMessage response = await Client.PutAsJsonAsync(PoolerRoute(id), new { name = Alexandre });
+        var response = await Client.PutAsJsonAsync(PoolerRoute(id), new { name = Alexandre });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await PoolerNames()).Should().Equal(Alexandre);
@@ -115,7 +113,7 @@ public sealed class DraftEndpointsTests : IDisposable
     [Fact]
     public async Task PutPooler_When_UnknownId_Should_ReturnNotFound()
     {
-        HttpResponseMessage response = await Client.PutAsJsonAsync(PoolerRoute(Guid.NewGuid()), new { name = Sam });
+        var response = await Client.PutAsJsonAsync(PoolerRoute(Guid.NewGuid()), new { name = Sam });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -123,12 +121,10 @@ public sealed class DraftEndpointsTests : IDisposable
     [Fact]
     public async Task OrderShuffleDelete_When_NotStarted_Should_Apply()
     {
-        foreach (string? name in new[] { Alex, Sam, Max })
-        {
+        foreach (var name in new[] { Alex, Sam, Max })
             await AddPooler(name);
-        }
 
-        List<Guid> ids = (await GetDraft()).Poolers.Select(p => p.Id).Reverse().ToList();
+        var ids = (await GetDraft()).Poolers.Select(p => p.Id).Reverse().ToList();
 
         (await Client.PutAsJsonAsync(OrderRoute, ids)).StatusCode.Should().Be(HttpStatusCode.OK);
         (await PoolerNames()).Should().Equal(Max, Sam, Alex);
@@ -145,7 +141,7 @@ public sealed class DraftEndpointsTests : IDisposable
 
         (await Client.PostAsync(ResetRoute, null)).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        DraftBody draft = await GetDraft();
+        var draft = await GetDraft();
         draft.Started.Should().BeFalse();
         draft.Poolers.Should().ContainSingle();
     }
@@ -163,9 +159,9 @@ public sealed class DraftEndpointsTests : IDisposable
 
     private void SeedStartedDraft()
     {
-        Pooler alex = new(Guid.NewGuid(), Alex);
+        var alex = new Pooler(Guid.NewGuid(), Alex);
         Directory.CreateDirectory(folder);
-        DraftData data = new(new Settings(), [alex], [new Pick(alex.Id, 1, "entry-1")]);
+        var data = new DraftData(new Settings(), [alex], [new Pick(alex.Id, 1, "entry-1")]);
         File.WriteAllText(FilePath, JsonSerializer.Serialize(data, JsonSerializerOptions.Web));
     }
 }

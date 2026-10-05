@@ -27,9 +27,9 @@ public class DraftTests
     [InlineData(20, -5, 2, 2, 2)]
     public void UpdateSettings_When_Inconsistent_Should_RejectAsInvalid(int rounds, int cap, int defenseMin, int goalies, int teams)
     {
-        Draft draft = new();
+        var draft = new Draft();
 
-        Change change = draft.UpdateSettings(new Settings(rounds, cap, defenseMin, goalies, teams));
+        var change = draft.UpdateSettings(new Settings(rounds, cap, defenseMin, goalies, teams));
 
         change.Status.Should().Be(ChangeStatus.Invalid);
         change.Reason.Should().NotBeNullOrWhiteSpace();
@@ -39,7 +39,7 @@ public class DraftTests
     [Fact]
     public void UpdateSettings_When_Valid_Should_Apply()
     {
-        Draft draft = new();
+        var draft = new Draft();
 
         draft.UpdateSettings(CustomSettings).Should().Be(Change.Ok);
 
@@ -53,7 +53,7 @@ public class DraftTests
     [InlineData(" Alex ")]
     public void AddPooler_When_NameEmptyOrDuplicate_Should_RejectAsInvalid(string name)
     {
-        Draft draft = WithPoolers(Alex);
+        var draft = WithPoolers(Alex);
 
         draft.AddPooler(name).Status.Should().Be(ChangeStatus.Invalid);
 
@@ -63,7 +63,7 @@ public class DraftTests
     [Fact]
     public void AddPooler_When_NameValid_Should_AppendTrimmed()
     {
-        Draft draft = WithPoolers(Alex);
+        var draft = WithPoolers(Alex);
 
         draft.AddPooler($"  {Sam} ").Should().Be(Change.Ok);
 
@@ -73,7 +73,7 @@ public class DraftTests
     [Fact]
     public void RenamePooler_When_NameTakenByAnother_Should_RejectAsInvalid()
     {
-        Draft draft = WithPoolers(Alex, Sam);
+        var draft = WithPoolers(Alex, Sam);
 
         draft.RenamePooler(draft.Poolers[1].Id, Alex.ToUpperInvariant()).Status.Should().Be(ChangeStatus.Invalid);
     }
@@ -81,7 +81,7 @@ public class DraftTests
     [Fact]
     public void RenamePooler_When_SameNameDifferentCase_Should_Apply()
     {
-        Draft draft = WithPoolers(Alex);
+        var draft = WithPoolers(Alex);
 
         draft.RenamePooler(draft.Poolers[0].Id, Alex.ToUpperInvariant()).Should().Be(Change.Ok);
 
@@ -97,7 +97,7 @@ public class DraftTests
     [Fact]
     public void RemovePooler_When_NotStarted_Should_Remove()
     {
-        Draft draft = WithPoolers(Alex, Sam);
+        var draft = WithPoolers(Alex, Sam);
 
         draft.RemovePooler(draft.Poolers[0].Id).Should().Be(Change.Ok);
 
@@ -107,7 +107,7 @@ public class DraftTests
     [Fact]
     public void Reorder_When_SameSetOfIds_Should_ApplyNewOrder()
     {
-        Draft draft = WithPoolers(Alex, Sam, Max);
+        var draft = WithPoolers(Alex, Sam, Max);
 
         draft.Reorder(ReversedIds(draft)).Should().Be(Change.Ok);
 
@@ -117,8 +117,8 @@ public class DraftTests
     [Fact]
     public void Reorder_When_IdsDoNotMatchPoolers_Should_RejectAsInvalid()
     {
-        Draft draft = WithPoolers(Alex, Sam);
-        Guid first = draft.Poolers[0].Id;
+        var draft = WithPoolers(Alex, Sam);
+        var first = draft.Poolers[0].Id;
 
         draft.Reorder([first, Guid.NewGuid()]).Status.Should().Be(ChangeStatus.Invalid);
         draft.Reorder([first, first]).Status.Should().Be(ChangeStatus.Invalid);
@@ -127,8 +127,8 @@ public class DraftTests
     [Fact]
     public void Shuffle_When_RandomSwaps_Should_KeepSamePoolersInNewOrder()
     {
-        Draft draft = WithPoolers(Alex, Sam, Max);
-        Random random = Substitute.For<Random>();
+        var draft = WithPoolers(Alex, Sam, Max);
+        var random = Substitute.For<Random>();
         random.Next(Arg.Any<int>(), Arg.Any<int>()).Returns(call => call.ArgAt<int>(1) - 1);
 
         draft.Shuffle(random).Should().Be(Change.Ok);
@@ -139,7 +139,7 @@ public class DraftTests
     [Fact]
     public void SetupChanges_When_DraftStarted_Should_BeLocked()
     {
-        Draft draft = Started(Alex, Sam);
+        var draft = Started(Alex, Sam);
 
         draft.UpdateSettings(CustomSettings).Status.Should().Be(ChangeStatus.Locked);
         draft.AddPooler(Max).Status.Should().Be(ChangeStatus.Locked);
@@ -154,7 +154,7 @@ public class DraftTests
     [Fact]
     public void RenamePooler_When_DraftStarted_Should_ApplyAndKeepPicks()
     {
-        Draft draft = Started(Alex);
+        var draft = Started(Alex);
 
         draft.RenamePooler(draft.Poolers[0].Id, Alexandre).Should().Be(Change.Ok);
 
@@ -165,7 +165,7 @@ public class DraftTests
     [Fact]
     public void Reset_When_DraftStarted_Should_ClearPicksOnlyAndUnlockSetup()
     {
-        Draft draft = Started(Alex, Sam);
+        var draft = Started(Alex, Sam);
 
         draft.Reset().Should().Be(Change.Ok);
 
@@ -176,18 +176,16 @@ public class DraftTests
 
     private static Draft WithPoolers(params string[] names)
     {
-        Draft draft = new();
-        foreach (string name in names)
-        {
+        var draft = new Draft();
+        foreach (var name in names)
             draft.AddPooler(name);
-        }
 
         return draft;
     }
 
     private static Draft Started(params string[] names)
     {
-        List<Pooler> poolers = names.Select(n => new Pooler(Guid.NewGuid(), n)).ToList();
+        var poolers = names.Select(n => new Pooler(Guid.NewGuid(), n)).ToList();
         return new Draft(new DraftData(DefaultSettings, poolers, [new Pick(poolers[0].Id, 1, EntryId)]));
     }
 

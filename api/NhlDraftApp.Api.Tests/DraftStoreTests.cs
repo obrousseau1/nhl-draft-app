@@ -16,15 +16,13 @@ public sealed class DraftStoreTests : IDisposable
     public void Dispose()
     {
         if (Directory.Exists(folder))
-        {
             Directory.Delete(folder, recursive: true);
-        }
     }
 
     [Fact]
     public void Constructor_When_FileMissing_Should_StartWithDefaults()
     {
-        DraftStore store = new(FilePath);
+        var store = new DraftStore(FilePath);
 
         store.Read(d => d.Settings).Should().Be(new Settings());
         store.Read(d => d.Poolers).Should().BeEmpty();
@@ -33,12 +31,12 @@ public sealed class DraftStoreTests : IDisposable
     [Fact]
     public void Apply_When_ChangeSucceeds_Should_PersistForNextStore()
     {
-        DraftStore store = new(FilePath);
+        var store = new DraftStore(FilePath);
         store.Apply(d => d.UpdateSettings(CustomSettings));
         store.Apply(d => d.AddPooler(Alex));
         store.Apply(d => d.AddPooler(Sam));
 
-        DraftStore reloaded = new(FilePath);
+        var reloaded = new DraftStore(FilePath);
 
         reloaded.Read(d => d.ToData()).Should().BeEquivalentTo(store.Read(d => d.ToData()));
         reloaded.Read(d => d.Settings).Should().Be(CustomSettings);
@@ -55,7 +53,7 @@ public sealed class DraftStoreTests : IDisposable
     [Fact]
     public void Apply_When_ChangeRefused_Should_NotWriteFile()
     {
-        Change change = new DraftStore(FilePath).Apply(d => d.AddPooler(" "));
+        var change = new DraftStore(FilePath).Apply(d => d.AddPooler(" "));
 
         change.Status.Should().Be(ChangeStatus.Invalid);
         File.Exists(FilePath).Should().BeFalse();
@@ -64,7 +62,7 @@ public sealed class DraftStoreTests : IDisposable
     [Fact]
     public void DefaultPath_When_NotConfigured_Should_BeUnderLocalAppData()
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
         DraftStore.DefaultPath.Should().Be(Path.Combine(localAppData, "NhlDraftApp", FileName));
     }
