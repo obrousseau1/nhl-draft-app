@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/api/">
+    <Project Path="api/NhlDraftApp.Api/NhlDraftApp.Api.csproj" />
+    <Project Path="api/NhlDraftApp.Api.Tests/NhlDraftApp.Api.Tests.csproj" />
+  </Folder>
+</Solution>

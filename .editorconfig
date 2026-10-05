@@ -1,0 +1,36 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,ts,tsx,css,html}]
+indent_size = 2
+
+[*.cs]
+# Usings: System first, then the rest alphabetically
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# StyleCop: only the rules below are on
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpecialRules.severity = none
+
+# Usings: System first, then alphabetical
+dotnet_diagnostic.SA1208.severity = error
+dotnet_diagnostic.SA1210.severity = error
+
+# Public members before private
+dotnet_diagnostic.SA1202.severity = error
+
+# Notice only; XML docs are not used
+dotnet_diagnostic.SA0001.severity = none

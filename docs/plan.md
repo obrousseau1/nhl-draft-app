@@ -82,3 +82,4 @@ EC-16 (build + tests), EC-18 (complexity), EC-19 (lean + clean-code audit), EC-2
 - **2026-10-05 — Creation** — written by /plan-and-shred from intent.md and spec.md.
 - **2026-10-05 — CI/CD and Azure** — CI added to chunks 1, 2, 4; new chunk 6 (Azure deploy); EC-21 to EC-26 assigned.
 - **2026-10-05 — Sync to Azure** — new chunk 7 (one-way push, read-only mirror); EC-27 to EC-30 assigned.
+- **2026-10-05 — Build, shred 1** — built as planned; `Pick` record exists already (needed for the lock), pool entries left to chunks 3 and 4.
