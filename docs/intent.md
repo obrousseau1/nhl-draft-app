@@ -37,6 +37,7 @@ board it lacks.
 
 ## Constraints
 - Web app, works without internet: local C# API + browser on host laptop.
+- Also deployed to an Azure Web App (CI/CD on GitHub Actions), host-only login. Local stays the draft-night path and pushes every change to Azure when online; Azure is a read-only mirror.
 - C# backend; persists full draft state after every pick.
 - React/TypeScript frontend written by the user (learning); only minimal
   stub files with beginner comments, first-reactor style.
@@ -57,6 +58,7 @@ board it lacks.
 
 ## Not this
 - Multi-device / per-pooler phones, live sync.
+- Two-way sync or editing on Azure.
 - Season tracking, scoring, trades (PoolExpert's job).
 - Re-import or merge after the draft starts.
 - File export to PoolExpert (no import exists).

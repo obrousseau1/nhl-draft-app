@@ -1,0 +1,44 @@
+@host = http://localhost:5190
+@poolerId = 00000000-0000-0000-0000-000000000000
+
+# Writes return 200 with the whole draft. Errors are ProblemDetails (application/problem+json, message in "detail"):
+# 400 invalid, 404 unknown pooler, 409 locked, 403 cross-site write.
+
+### Draft: settings, poolers in draft order, picks, started
+GET {{host}}/api/draft
+
+### Start a new draft: new file, keeps settings and poolers, no picks
+POST {{host}}/api/draft/new
+
+### Settings (rounds 1-50, cap up to 1000, counts 0-rounds, maxPoolers 2-30)
+PUT {{host}}/api/draft/settings
+Content-Type: application/json
+
+{ "rounds": 20, "cap": 104, "defenseMin": 2, "goalies": 2, "teams": 2, "maxPoolers": 12 }
+
+### Add a pooler (400 if empty, over 40 chars, duplicate, or limit reached)
+POST {{host}}/api/poolers
+Content-Type: application/json
+
+{ "name": "Alex" }
+
+### Rename a pooler (allowed after the draft starts)
+PUT {{host}}/api/poolers/{{poolerId}}
+Content-Type: application/json
+
+{ "name": "Alexandre" }
+
+### Remove a pooler
+DELETE {{host}}/api/poolers/{{poolerId}}
+
+### Set the round-1 order: every pooler id exactly once
+PUT {{host}}/api/poolers/order
+Content-Type: application/json
+
+["{{poolerId}}"]
+
+### Random draft order
+POST {{host}}/api/poolers/shuffle
+
+### Clear all picks, keep settings and poolers
+POST {{host}}/api/draft/reset

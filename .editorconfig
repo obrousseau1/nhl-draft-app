@@ -1,0 +1,58 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,ts,tsx,css,html}]
+indent_size = 2
+
+[*.cs]
+# Usings: System first, then the rest alphabetically
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# StyleCop: only the rules below are on
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpecialRules.severity = none
+
+# Usings: System first, then alphabetical
+dotnet_diagnostic.SA1208.severity = error
+dotnet_diagnostic.SA1210.severity = error
+
+# Public members before private
+dotnet_diagnostic.SA1202.severity = error
+
+# Notice only; XML docs are not used
+dotnet_diagnostic.SA0001.severity = none
+
+# Don't discard unused results (e.g. FluentAssertions chains)
+csharp_style_unused_value_expression_statement_preference = discard_variable:none
+dotnet_diagnostic.IDE0058.severity = none
+
+# var everywhere
+csharp_style_var_for_built_in_types = true:error
+csharp_style_var_when_type_is_apparent = true:error
+csharp_style_var_elsewhere = true:error
+dotnet_diagnostic.IDE0007.severity = error
+dotnet_diagnostic.IDE0008.severity = none
+
+# Braces only when the statement spans several lines
+csharp_prefer_braces = when_multiline:error
+dotnet_diagnostic.IDE0011.severity = error
+
+# `var x = new Foo()` rather than `Foo x = new()`
+csharp_style_implicit_object_creation_when_type_is_apparent = false:error
+
+# One type per file, file named after the type
+dotnet_diagnostic.SA1402.severity = error
+dotnet_diagnostic.SA1649.severity = error

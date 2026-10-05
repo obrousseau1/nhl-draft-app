@@ -16,6 +16,7 @@ Our yearly live pool draft is tracked by hand: nobody sees each pooler's remaini
 - Draft state saved after every change; survives refresh and restart.
 - XLSX parsing reused from `X:\nhl-fantasy-draft` (`NhlDraftKit.Core`) via relative project reference.
 - Frontend: only toolchain config and comment-only source stubs; the user writes the React code.
+- CI on GitHub Actions for every push and PR; CD to an Azure Web App on every push to `main`, reachable only by the host (Easy Auth). Local offline run stays the primary draft-night path; it pushes every change to Azure when online, and Azure is a read-only mirror.
 
 ## Capabilities
 
@@ -26,6 +27,8 @@ Our yearly live pool draft is tracked by hand: nobody sees each pooler's remaini
 - `pick-rules`: which picks are legal for a pooler in a round.
 - `player-search`: finding an unpicked player or team for a box.
 - `roster-view`: per-pooler roster listing for PoolExpert entry.
+- `deployment`: CI, continuous deployment to Azure, host-only Azure access, Azure draft persistence.
+- `draft-sync`: one-way push of the local draft to the Azure read-only mirror, offline-tolerant, with visible status.
 
 ### Modified Capabilities
 _(none — new project)_
@@ -35,4 +38,6 @@ _(none — new project)_
 - New repo layout: `api/` (C# API + tests), `web/` (Vite React TS), `NhlDraftApp.slnx`.
 - Dependency on `X:\nhl-fantasy-draft\src\NhlDraftKit.Core` (net10.0, ClosedXML) — both repos must sit side by side.
 - Local data file under the user's app-data folder.
-- No external services, no network calls at runtime.
+- Local run needs no network; pushes to Azure are optional and retried until online.
+- GitHub Actions workflows; repo secret with read access to private `nhl-fantasy-draft`; Azure App Service (Linux, F1) + Entra app registration (exposed scope, public client flows), set up by hand.
+- New packages: `Microsoft.Identity.Client`, `Microsoft.Identity.Client.Extensions.Msal` (local sync login).
