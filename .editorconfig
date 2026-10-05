@@ -34,3 +34,7 @@ dotnet_diagnostic.SA1202.severity = error
 
 # Notice only; XML docs are not used
 dotnet_diagnostic.SA0001.severity = none
+
+# Don't discard unused results (e.g. FluentAssertions chains)
+csharp_style_unused_value_expression_statement_preference = discard_variable:none
+dotnet_diagnostic.IDE0058.severity = none

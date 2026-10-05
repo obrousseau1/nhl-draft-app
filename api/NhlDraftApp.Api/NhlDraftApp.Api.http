@@ -1,0 +1,38 @@
+@host = http://localhost:5190
+@poolerId = 00000000-0000-0000-0000-000000000000
+
+### Draft: settings, poolers in draft order, picks, started
+GET {{host}}/api/draft
+
+### Settings (refused with 409 once a pick exists)
+PUT {{host}}/api/draft/settings
+Content-Type: application/json
+
+{ "rounds": 20, "cap": 104, "defenseMin": 2, "goalies": 2, "teams": 2 }
+
+### Add a pooler (400 if empty or duplicate)
+POST {{host}}/api/poolers
+Content-Type: application/json
+
+{ "name": "Alex" }
+
+### Rename a pooler (allowed after the draft starts)
+PUT {{host}}/api/poolers/{{poolerId}}
+Content-Type: application/json
+
+{ "name": "Alexandre" }
+
+### Remove a pooler
+DELETE {{host}}/api/poolers/{{poolerId}}
+
+### Set the round-1 order: every pooler id exactly once
+PUT {{host}}/api/poolers/order
+Content-Type: application/json
+
+["{{poolerId}}"]
+
+### Random draft order
+POST {{host}}/api/poolers/shuffle
+
+### Clear all picks, keep settings and poolers
+POST {{host}}/api/draft/reset
