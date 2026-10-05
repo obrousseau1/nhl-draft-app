@@ -29,7 +29,7 @@ Empty repo. Motivation and scope: see `proposal.md` and `docs/intent.md`. Requir
 
 **D3 — Pool snapshot in draft state.** On import the API maps `Kit` into its own `PoolEntry { Id, First, Last, NhlTeam, Position (C/LW/RW/D/G/Team), CapHit, NoCapHit }` list and stores it. Picks reference `PoolEntry.Id`. Teams become entries with `Position = Team`, `CapHit = 0`. Isolates the app from Core model changes after import and keeps restore independent of the XLSX file. Upload is multipart → temp file → `KitReader.Read` → delete temp (KitReader takes a path).
 
-**D4 — Domain in plain classes, endpoints thin.** `Draft` (state + mutations, returns a result with refusal reason), `PickRules.Check(draft, pooler, round, entry)`, `Snake.Current(draft)`, `PoolerTotals.Of(draft, pooler)`, `Search.Find(...)`. Endpoints map HTTP ↔ domain. Rules are one ordered list of checks, first failure wins → one reason string (spec *Refusal reason*).
+**D4 — Domain in plain classes, controllers thin.** `Draft` (state + mutations, returns a result with refusal reason), `PickRules.Check(draft, pooler, round, entry)`, `Snake.Current(draft)`, `PoolerTotals.Of(draft, pooler)`, `Search.Find(...)`. `[ApiController]` classes (one per resource: `DraftController`, `PoolersController`, later `PicksController`, `KitController`, `PoolController`, `SyncController`) map HTTP ↔ domain and return `IResult`; `ChangeResponses` maps a `Change` to its status code. User decision: controllers over minimal-API `Map*` endpoints. Rules are one ordered list of checks, first failure wins → one reason string (spec *Refusal reason*).
 
 **D5 — Rules arithmetic.** For a pick of entry *e* into box (p, r), with the box's current pick removed first:
 - owner: *e* not in any other box.
