@@ -10,7 +10,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "typeCheck": "tsc -b",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^19.3.0",

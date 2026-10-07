@@ -24,7 +24,7 @@ export type DraftActions = {
 
 export type UseDraft = DraftActions & { draftState: DraftStatus};
 
-const draftReducer = (draftState: DraftStatus, action: DraftAction) : DraftStatus => {
+export const draftReducer = (draftState: DraftStatus, action: DraftAction) : DraftStatus => {
   switch(action.type) {
     case "loaded":
       return { status: 'ready', draft: action.draft }
