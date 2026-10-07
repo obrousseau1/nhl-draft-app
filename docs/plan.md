@@ -17,7 +17,7 @@ The host needs one offline board that tracks every pooler's picks, cap and roste
 
 ### 2. Add the web scaffold, offline hosting and README ([#2](https://github.com/obrousseau1/nhl-draft-app/issues/2))
 
-- **Scope** — `web/` (`package.json`, `index.html`, `vite.config.ts`, `tsconfig*.json`, `.oxlintrc.json` real; `src/main.tsx`, `src/App.tsx`, `src/test-setup.ts` comments only), static hosting of `wwwroot` with SPA fallback in the API, CI `web` job + publish step copying `web/dist` into the publish `wwwroot`, `README.md`
+- **Scope** — `web/` (`package.json`, `index.html`, `vite.config.ts`, `tsconfig*.json`, `.oxlintrc.json`, `src/test-setup.ts` real; `src/main.tsx`, `src/App.tsx` comment-only pointers; `web/GUIDE.md` = all suggested files, steps and concepts), `Hosting/WebAppHosting.cs` serving `wwwroot` with SPA fallback, Vite building into `api/NhlDraftApp.Api/wwwroot`, CI `web` + `publish` jobs, `README.md`
 - **Ships alone because** — user's React starting point against chunk 1's live API; API still runs without `dist`
 - **Coverage** — `pnpm run lint`, `pnpm run typeCheck`, `pnpm run test` in `web`; endpoint test that `/` serves index from a temp dist; manual run with network off; green Actions run, publish artifact holds `wwwroot/index.html`
 - **Specs** — draft-board: Works offline; deployment: Continuous integration (web part)
@@ -84,3 +84,4 @@ EC-16 (build + tests), EC-18 (complexity), EC-19 (lean + clean-code audit), EC-2
 - **2026-10-05 — Sync to Azure** — new chunk 7 (one-way push, read-only mirror); EC-27 to EC-30 assigned.
 - **2026-10-05 — Build, shred 1** — built as planned; `Pick` record exists already (needed for the lock), pool entries left to chunks 3 and 4.
 - **2026-10-05 — PR #8 review** — chunk 1 grew: same-origin write guard, AllowedHosts, IDraftFile driver, one file per draft + `POST /api/draft/new`, MaxPoolers, ProblemDetails errors, CI on every branch push. Chunk 3 gains "Settings change mid-draft"; chunk 6 gains the `main` deploy guard and `AllowedHosts`/`Draft__DataFolder` app settings.
+- **2026-10-06 — Build, shred 2** — no copy step: Vite builds into the API's `wwwroot`, so `dotnet run` and `dotnet publish` both pick it up. All frontend suggestions moved from source comments into one `web/GUIDE.md` (user request). Hosting tests run in a "Testing" environment, since Development serves the project's real `wwwroot` through the static-web-assets manifest.

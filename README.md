@@ -18,8 +18,8 @@ Full specs: [docs/intent.md](docs/intent.md) (the problem), [docs/spec.md](docs/
 
 | Chunk | Issue | State |
 |---|---|---|
-| API scaffold, draft state, persistence, setup | [#1](https://github.com/obrousseau1/nhl-draft-app/issues/1) | in review, CI green |
-| Web scaffold, offline hosting | [#2](https://github.com/obrousseau1/nhl-draft-app/issues/2) | planned |
+| API scaffold, draft state, persistence, setup | [#1](https://github.com/obrousseau1/nhl-draft-app/issues/1) | done |
+| Web scaffold, offline hosting | [#2](https://github.com/obrousseau1/nhl-draft-app/issues/2) | in progress |
 | Pick rules, snake order, totals | [#3](https://github.com/obrousseau1/nhl-draft-app/issues/3) | planned |
 | Draft Kit import | [#4](https://github.com/obrousseau1/nhl-draft-app/issues/4) | planned |
 | Search and roster view | [#5](https://github.com/obrousseau1/nhl-draft-app/issues/5) | planned |
@@ -32,7 +32,7 @@ Full specs: [docs/intent.md](docs/intent.md) (the problem), [docs/spec.md](docs/
 |---|---|---|
 | API | .NET 10 ASP.NET Core controllers (`api/NhlDraftApp.Api`), one per resource | All draft rules live in tested C#; controller actions only map HTTP to the domain. |
 | Storage | One JSON file per draft (newest = current), written to a temp file and then swapped in | It's one ~100 KB document, so no database is needed. A crash never leaves a half-written file, and a new draft never overwrites the previous one. |
-| Frontend | React + TypeScript + Vite (`web/`, planned) | Written by hand as a learning project. |
+| Frontend | React 19 + TypeScript + Vite (`web/`), oxlint, Vitest | Written by hand as a learning project; see [web/GUIDE.md](web/GUIDE.md). |
 | XLSX parsing | `NhlDraftKit.Core` from [nhl-fantasy-draft](https://github.com/obrousseau1/nhl-fantasy-draft) via relative project reference (planned, #4) | Already reads this exact kit. |
 | Tests | xUnit, FluentAssertions, NSubstitute | Test names follow `Method_When_Condition_Should_Expectation`. |
 | CI/CD | GitHub Actions; Azure App Service (planned) | Azure access limited to the host by Easy Auth. |
@@ -44,27 +44,46 @@ The API listens on `localhost` only, so other devices can't reach it. Writes com
 
 ## Run
 
-Requires the .NET 10 SDK.
+Requires the .NET 10 SDK, Node 24+ and pnpm.
 
 ```
-dotnet run --project api/NhlDraftApp.Api        # http://localhost:5190
+dotnet run --project api/NhlDraftApp.Api        # API on http://localhost:5190
 dotnet build NhlDraftApp.slnx
 dotnet test NhlDraftApp.slnx
 ```
 
+Frontend (in `web/`):
+
+```
+pnpm install
+pnpm dev                                         # dev server with hot reload, /api proxied to :5190
+pnpm run lint
+pnpm run typeCheck
+pnpm run test
+pnpm run build                                   # builds into api/NhlDraftApp.Api/wwwroot
+```
+
+**Draft night (offline):** run `pnpm run build` once, then only `dotnet run --project api/NhlDraftApp.Api` and open http://localhost:5190. The API serves the built app, so no internet and no second terminal are needed.
+
+**Frontend is hand-written:** `web/src` starts empty on purpose. [web/GUIDE.md](web/GUIDE.md) holds every step, concept and suggested file.
+
 Try the endpoints with [NhlDraftApp.Api.http](api/NhlDraftApp.Api/NhlDraftApp.Api.http) (VS Code REST Client, Rider or Visual Studio).
 
-**Draft data:** one file per draft, `draft-<yyyyMMdd-HHmmss-fff>.json`, in `%LOCALAPPDATA%NhlDraftApp` by default. Override the folder with the `Draft:DataFolder` setting, e.g. `Draft__DataFolder=C:	emp
-hl`. The newest file opens at startup. `POST /api/draft/new` starts a new draft that keeps the settings and poolers, and the previous file is kept. An unreadable file is renamed `.corrupt-<timestamp>`.
+**Draft data:** one file per draft, `draft-<yyyyMMdd-HHmmss-fff>.json`, in `%LOCALAPPDATA%\NhlDraftApp` by default. Override the folder with the `Draft:DataFolder` setting, e.g. `Draft__DataFolder=C:\temp\nhl`. The newest file opens at startup. `POST /api/draft/new` starts a new draft that keeps the settings and poolers, and the previous file is kept. An unreadable file is renamed `.corrupt-<timestamp>`.
 
 ### Coming with later chunks
 
-- **#2:** `cd web`, `pnpm install` and `pnpm dev` for the frontend in development. On draft night, `dotnet run` alone serves the built app, offline.
 - **#4:** clone `nhl-fantasy-draft` next to this repo (`X:\nhl-draft-app` and `X:\nhl-fantasy-draft`), or the build fails.
 
 ## CI
 
 [.github/workflows/ci.yml](.github/workflows/ci.yml) builds and tests on **every push to any branch**, `main` included. A PR isn't needed to get a run: push the branch and check the Actions tab, or the PR's checks once one is open.
+
+| Job | Does |
+|---|---|
+| `dotnet` | build + test `NhlDraftApp.slnx` |
+| `web` | `pnpm install`, lint, typeCheck, test, build; uploads the built app (`wwwroot`) |
+| `publish` | after both: `dotnet publish` with the built app inside, checks `wwwroot/index.html`, uploads the `app` artifact (what #6 deploys) |
 
 ## Conventions
 
