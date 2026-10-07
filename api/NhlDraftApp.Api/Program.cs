@@ -1,4 +1,5 @@
 using NhlDraftApp.Api.Drafts.Data;
+using NhlDraftApp.Api.Hosting;
 using NhlDraftApp.Api.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,5 +17,6 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseSameOriginWrites();
 app.MapControllers();
+app.MapWebApp();
 
 app.Run();
