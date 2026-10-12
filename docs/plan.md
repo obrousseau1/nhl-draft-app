@@ -35,7 +35,7 @@ The host needs one offline board that tracks every pooler's picks, cap and roste
 
 ### 4. Import the Draft Kit through NhlDraftKit.Core ([#4](https://github.com/obrousseau1/nhl-draft-app/issues/4))
 
-- **Scope** — relative ProjectReference to `X:\nhl-fantasy-draft\src\NhlDraftKit.Core`, Kit → pool entry mapping, `POST /api/kit`, `.http` entry, real-kit check, CI checkout of private `nhl-fantasy-draft` side by side (`CORE_REPO_TOKEN` secret*)
+- **Scope** — relative ProjectReference to `X:\nhl-fantasy-draft\src\NhlDraftKit.Core`, Kit → pool entry mapping into the existing `PoolEntry`/`Position` and `DraftData.Pool` (added by chunk 3), pool size in `GET /api/draft`, `POST /api/kit`, `.http` entry, real-kit check, CI checkout of private `nhl-fantasy-draft` side by side (`CORE_REPO_TOKEN` secret*)
 - **Ships alone because** — one additive endpoint; isolates the brittle cross-repo seam in its own PR
 - **Coverage** — tests with an XLSX built in-test via ClosedXML; manual import of the real 2026-2027 kit (918 / 93 / 32); green Actions run with Core checked out
 - **Specs** — kit-import: Import Draft Kit, Missing cap hit counts as zero, Teams have no cap hit, Reject unreadable kit, Import only before the draft starts
@@ -85,3 +85,4 @@ EC-16 (build + tests), EC-18 (complexity), EC-19 (lean + clean-code audit), EC-2
 - **2026-10-05 — Build, shred 1** — built as planned; `Pick` record exists already (needed for the lock), pool entries left to chunks 3 and 4.
 - **2026-10-05 — PR #8 review** — chunk 1 grew: same-origin write guard, AllowedHosts, IDraftFile driver, one file per draft + `POST /api/draft/new`, MaxPoolers, ProblemDetails errors, CI on every branch push. Chunk 3 gains "Settings change mid-draft"; chunk 6 gains the `main` deploy guard and `AllowedHosts`/`Draft__DataFolder` app settings.
 - **2026-10-06 — Build, shred 2** — no copy step: Vite builds into the API's `wwwroot`, so `dotnet run` and `dotnet publish` both pick it up. All frontend suggestions moved from source comments into one `web/GUIDE.md` (user request). Hosting tests run in a "Testing" environment, since Development serves the project's real `wwwroot` through the static-web-assets manifest.
+- **2026-10-12 — Build, shred 3** — built as planned. Chunk 3 had to add the pool itself (`PoolEntry`, `Position`, `DraftData.Pool`, optional so older files still load), so chunk 4 only maps the kit into it and adds the pool size. EC-9's "searchable again" waits for chunk 5's search. The frontend's `SettingsForm` still disables every field once the draft starts, though the API now accepts mid-draft changes: the user's call when they reach it.

@@ -18,6 +18,7 @@ public static class ChangeResponses
         {
             ChangeStatus.Locked => StatusCodes.Status409Conflict,
             ChangeStatus.NotFound => StatusCodes.Status404NotFound,
+            ChangeStatus.Refused => StatusCodes.Status422UnprocessableEntity,
             _ => StatusCodes.Status400BadRequest,
         };
         return controller.Problem(detail: change.Reason, statusCode: status);
