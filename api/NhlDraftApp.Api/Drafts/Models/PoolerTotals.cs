@@ -6,7 +6,8 @@ public record PoolerTotals(decimal CapRemaining, decimal? AveragePerPick, int De
     {
         var settings = draft.Settings;
         var tally = draft.TallyOf(pooler.Id);
-        var remaining = settings.Cap - tally.CapUsed;
+        // WithinCap rounds, so a stray-decimal cap hit can overshoot by a fraction.
+        var remaining = Math.Max(0m, settings.Cap - tally.CapUsed);
         // Teams cost no cap, so the cap left is spread over the player picks only.
         var playerBoxes = tally.EmptyBoxes(settings) - tally.TeamsNeeded(settings);
         decimal? average = playerBoxes > 0 ? Math.Round(remaining / playerBoxes, 3) : null;

@@ -39,30 +39,66 @@ public sealed class PicksEndpointsTests : IDisposable
     }
 
     [Fact]
-    public async Task GetDraft_When_PickMade_Should_ReturnBoardRowsInOrderWithFilledBoxes()
+    public async Task PutPick_When_PickAllowed_Should_ReturnOkWithThePick()
     {
-        (await PutPick(alex, 1, McDavid)).StatusCode.Should().Be(HttpStatusCode.OK);
+        var response = await PutPick(alex, 1, McDavid);
 
-        var draft = await GetDraft();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<DraftView>())!.Picks.Should().Equal(new Pick(alex.Id, 1, McDavid.Id));
+    }
+
+    [Fact]
+    public async Task GetDraft_When_PickMade_Should_ListRowsInPoolerOrder()
+    {
+        var draft = await DraftAfterFirstPick();
 
         draft.Board.Select(r => r.PoolerId).Should().Equal(alex.Id, sam.Id);
+    }
+
+    [Fact]
+    public async Task GetDraft_When_PickMade_Should_GiveEachRowOneBoxPerRound()
+    {
+        var draft = await DraftAfterFirstPick();
+
         draft.Board.Should().AllSatisfy(r => r.Boxes.Select(b => b.Round).Should().Equal(1, 2, 3));
+    }
+
+    [Fact]
+    public async Task GetDraft_When_PickMade_Should_FillTheBoxWithNamePositionTeamAndCap()
+    {
+        var draft = await DraftAfterFirstPick();
+
         var box = draft.Board[0].Boxes[0].Entry!;
         (box.Name, box.Position, box.NhlTeam, box.CapHit).Should().Be(("Connor McDavid", Position.C, "EDM", 12.5m));
+    }
+
+    [Fact]
+    public async Task GetDraft_When_PickMade_Should_LeaveOtherPoolersBoxesEmpty()
+    {
+        var draft = await DraftAfterFirstPick();
+
         draft.Board[1].Boxes.Should().AllSatisfy(b => b.Entry.Should().BeNull());
+    }
+
+    [Fact]
+    public async Task GetDraft_When_PickMade_Should_MoveCurrentPickToTheNextPooler()
+    {
+        var draft = await DraftAfterFirstPick();
+
         draft.CurrentPick.Should().Be(new Box(sam.Id, 1));
     }
 
     [Fact]
-    public async Task PutPick_When_RuleRefuses_Should_ReturnUnprocessableWithReason()
+    public async Task PutPick_When_RuleRefuses_Should_ReturnUnprocessableWithReasonAndCode()
     {
         await PutPick(alex, 1, McDavid);
 
         var response = await PutPick(sam, 1, McDavid);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-        var problem = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString();
-        problem.Should().Contain(Alex);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("detail").GetString().Should().Contain(Alex);
+        problem.GetProperty("code").GetString().Should().Be(nameof(PickRule.Taken));
     }
 
     [Fact]
@@ -74,6 +110,14 @@ public sealed class PicksEndpointsTests : IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetDraft()).Picks.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeletePick_When_PoolerUnknown_Should_ReturnNotFound()
+    {
+        var response = await client.DeleteAsync(PickRoute(new Pooler(Guid.NewGuid(), Sam), 1));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -108,4 +152,10 @@ public sealed class PicksEndpointsTests : IDisposable
         client.PutAsJsonAsync(PickRoute(pooler, round), new { entryId = entry.Id });
 
     private async Task<DraftView> GetDraft() => (await client.GetFromJsonAsync<DraftView>(DraftRoute))!;
+
+    private async Task<DraftView> DraftAfterFirstPick()
+    {
+        await PutPick(alex, 1, McDavid);
+        return await GetDraft();
+    }
 }

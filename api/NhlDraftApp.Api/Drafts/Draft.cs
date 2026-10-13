@@ -47,8 +47,8 @@ public class Draft(DraftData? data = null)
             return Change.Invalid($"Round must be between 1 and {Settings.Rounds}.");
         if (Entry(entryId) is not { } entry)
             return Change.EntryNotFound;
-        if (PickRules.Check(this, pooler, round, entry) is { } reason)
-            return Change.Refused(reason);
+        if (PickRules.Check(this, pooler, round, entry) is { } refusal)
+            return Change.Refused(refusal);
         picks.RemoveAll(p => p.Fills(poolerId, round));
         picks.Add(new Pick(poolerId, round, entryId));
         return Change.Ok;

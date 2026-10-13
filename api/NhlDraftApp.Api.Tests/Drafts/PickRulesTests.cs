@@ -44,6 +44,7 @@ public class PickRulesTests
         var change = draft.Pick(draft.Poolers[1].Id, 1, McDavid.Id);
 
         change.Status.Should().Be(ChangeStatus.Refused);
+        change.Code.Should().Be(PickRule.Taken);
         change.Reason.Should().Contain(Alex).And.Contain(McDavid.Name);
         draft.ToData().Should().BeEquivalentTo(before);
     }
@@ -57,6 +58,7 @@ public class PickRulesTests
         var change = draft.Pick(draft.Poolers[0].Id, 2, Four.Id);
 
         change.Status.Should().Be(ChangeStatus.Refused);
+        change.Code.Should().Be(PickRule.OverCap);
         change.Reason.Should().Contain("cap");
     }
 
@@ -80,6 +82,7 @@ public class PickRulesTests
         var change = draft.Pick(draft.Poolers[0].Id, 3, ThirdGoalie.Id);
 
         change.Status.Should().Be(ChangeStatus.Refused);
+        change.Code.Should().Be(PickRule.GoalieLimit);
         change.Reason.Should().Contain("goalie");
     }
 
@@ -92,6 +95,7 @@ public class PickRulesTests
         var change = draft.Pick(draft.Poolers[0].Id, 3, Canucks.Id);
 
         change.Status.Should().Be(ChangeStatus.Refused);
+        change.Code.Should().Be(PickRule.TeamLimit);
         change.Reason.Should().Contain("team");
     }
 
@@ -113,6 +117,7 @@ public class PickRulesTests
         var change = draft.Pick(draft.Poolers[0].Id, 3, ThirdForward.Id);
 
         change.Status.Should().Be(ChangeStatus.Refused);
+        change.Code.Should().Be(PickRule.Unreachable);
         change.Reason.Should().Contain("2 goalies");
     }
 
@@ -129,6 +134,7 @@ public class PickRulesTests
         var change = draft.Pick(draft.Poolers[0].Id, 2, ThirdForward.Id);
 
         change.Status.Should().Be(ChangeStatus.Refused);
+        change.Code.Should().Be(PickRule.Unreachable);
         change.Reason.Should().Contain(needed);
     }
 
