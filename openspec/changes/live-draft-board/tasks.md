@@ -34,10 +34,10 @@
 - [ ] 6.3 Write `NhlDraftApp.Api.http` with one example per endpoint; verify each request runs against a started API
 - [ ] 6.4 Verify restart scenario: make picks, restart the host in a test, `GET /api/draft` returns the same picks and current pick
 
-## 7. Frontend scaffold (config real, source comments only)
+## 7. Frontend scaffold and setup page
 
 - [ ] 7.1 Create `web/package.json`, `index.html`, `vite.config.ts` (proxy `/api` → 5190, vitest jsdom), `tsconfig*.json`, `.oxlintrc.json` from first-reactor; verify `pnpm install` succeeds
-- [ ] 7.2 Create comment-only `src/main.tsx` and `src/App.tsx` (pointers only), `src/test-setup.ts`, and one `web/GUIDE.md` holding every suggested file, step and React/TS concept; verify `pnpm run lint`, `pnpm run typeCheck`, `pnpm run test` exit 0
+- [ ] 7.2 Create `src/main.tsx`, `src/App.tsx` (setup page) and `src/test-setup.ts`; verify `pnpm run lint`, `pnpm run typeCheck`, `pnpm run test` exit 0
 
 ## 8. Docs and integration
 

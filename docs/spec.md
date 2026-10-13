@@ -430,14 +430,13 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
 - **Relative ProjectReference to `X:\nhl-fantasy-draft\src\NhlDraftKit.Core`** — any rename, move or signature change in the old repo (`KitReader.Read`, `Player`, `TeamRow`, `Teams.FromKit`) breaks this build. A fresh clone of this repo alone does not build.
 - **`KitReader` is owned by the other app** — it may evolve for season-prep needs (e.g. new required headers) and start rejecting kits this app could read.
 - **Pool snapshot (design D3)** — picks reference `PoolEntry.Id`; if Id generation changes between versions, an existing `draft.json` loses its picks' links.
-- **Comment-only `.tsx` stubs** — lint/typecheck/test must pass on files with no code; `vitest --passWithNoTests` hides a real "no tests" state once the user starts writing code.
 - **Dev port 5190 hard-coded in two places** (`launchSettings.json`, `vite.config.ts`).
 - **CI checks out the private `nhl-fantasy-draft` side by side** with a token secret; an expired token or a renamed repo turns every run red at checkout.
 - **JSON file + in-process lock assume one Azure instance** — scale-out would corrupt or split the draft.
 - **Every push to `main` deploys and restarts the Azure app** — safe only because restart restores state.
 - **Revision counter in `draft.json`** — Azure trusts it to order snapshots; a reset or a restored old file must never lower it, or every push is refused.
 - **Easy Auth now validates bearer tokens** — allowed audience and the Entra public-client flag are hand-set; a change in the portal silently stops sync (status turns failing).
-- **Static web assets in Development** — a test host in Development serves the project's real `wwwroot` (manifest), not its configured web root; hosting tests must run in another environment, and deleting `wwwroot` locally needs a full rebuild.
+- **Static web assets in Development** — a test host in Development serves the project's real `wwwroot` (manifest), not its configured web root; hosting tests must run in another environment, and deleting `wwwroot` locally needs a full rebuild.
 
 ## Biggest risks
 
@@ -484,7 +483,7 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
     { "id": "EC-9", "description": "Replace and clear tests pass: cleared or replaced entry is searchable again; a refused pick leaves state unchanged.", "verified": false },
     { "id": "EC-10", "description": "Totals test passes: cap 104, 20 rounds, picks 12.5 C + 3.5 D → remaining 88.0, average 5.5 (88 ÷ (18 empty − 2 teams needed)), D 1, G 2, teams 2; average blank when only team picks remain.", "verified": true },
     { "id": "EC-11", "description": "Restart test passes: picks made, host restarted on the same data file, GET /api/draft returns identical picks, totals and current pick; writes go through a temp file then replace.", "verified": true },
-    { "id": "EC-12", "description": "Offline run: with `web/dist` built, `dotnet run --project api/NhlDraftApp.Api` alone serves the app at `/` with network disabled, and index.html references no external URL.", "verified": false },
+    { "id": "EC-12", "description": "Offline run: with the app built into `api/NhlDraftApp.Api/wwwroot`, `dotnet run --project api/NhlDraftApp.Api` alone serves the app at `/` with network disabled, and index.html references no external URL.", "verified": false },
     { "id": "EC-13", "description": "Search tests pass: 'stutzle' finds Stützle; picked entries hidden; position (incl. Team) and NHL team filters; eligible-only hides entries PickRules refuses; NoCapHit marker present.", "verified": false },
     { "id": "EC-14", "description": "Roster tests pass: picks grouped Forwards/Defensemen/Goalies/Teams with name, NHL team, cap hit and total cap; partial roster lists only existing picks.", "verified": false },
     { "id": "EC-15", "description": "Frontend checks: in `web`, `pnpm run lint`, `pnpm run typeCheck` and `pnpm run test` exit 0 (the user's setup page and its tests replaced the comment-only stubs).", "verified": true },

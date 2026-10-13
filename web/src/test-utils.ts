@@ -17,7 +17,7 @@ export const sampleDraft: DraftView = {
   started: false,
 }
 
-const action = () => vi.fn().mockResolvedValue(undefined)
+const action = () => vi.fn().mockResolvedValue('ok')
 
 // A fake useDraft() result: every action is a vi.fn(), so a test can check how it was called.
 export function fakeDraft(draft: DraftView = sampleDraft): UseDraft {

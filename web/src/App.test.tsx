@@ -41,8 +41,22 @@ describe('App', () => {
     expect(screen.getByDisplayValue('Alex')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenLastCalledWith('/api/poolers', expect.objectContaining({
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'alex' }),
     }))
+  })
+
+  it('when a refusal has no detail, should show its title', async () => {
+    const validation = 'One or more validation errors occurred.'
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(sampleDraft))
+      .mockResolvedValueOnce(jsonResponse({ status: 400, title: validation }, 400))
+    renderApp()
+    await screen.findByDisplayValue('Alex')
+
+    addPooler('Dave')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(validation)
   })
 
   it('when an add succeeds after a refusal, should show the new draft and clear the message', async () => {

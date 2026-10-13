@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { PoolerRow } from './PoolerRow.tsx'
 import { bob, renderWithDraft } from '../test-utils.ts'
 
@@ -19,6 +19,16 @@ describe('PoolerRow', () => {
     fireEvent.blur(input)
 
     expect(draft.renamePooler).toHaveBeenCalledExactlyOnceWith(bob.id, newName)
+  })
+
+  it('when the rename is refused, should restore the saved name', async () => {
+    const { draft, input } = renderRow()
+    vi.mocked(draft.renamePooler).mockResolvedValue('refused')
+
+    fireEvent.change(input, { target: { value: newName } })
+    fireEvent.blur(input)
+
+    await waitFor(() => expect(input).toHaveValue(bob.name))
   })
 
   it('when Enter is pressed, should leave the field and rename once', () => {

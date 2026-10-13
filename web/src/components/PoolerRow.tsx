@@ -15,10 +15,10 @@ export const PoolerRow = (props: Props) => {
   const [poolerName, setPoolerName] = useState(pooler.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const save = () => {
+  const save = async () => {
     const name = poolerName.trim();
     if (name === pooler.name) return;
-    void draftActions.renamePooler(pooler.id, name);
+    if (await draftActions.renamePooler(pooler.id, name) === 'refused') setPoolerName(pooler.name);
   }
 
   const cancel = () => {
