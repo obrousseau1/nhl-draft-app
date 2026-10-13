@@ -18,8 +18,12 @@ public static class ChangeResponses
         {
             ChangeStatus.Locked => StatusCodes.Status409Conflict,
             ChangeStatus.NotFound => StatusCodes.Status404NotFound,
+            ChangeStatus.Refused => StatusCodes.Status422UnprocessableEntity,
             _ => StatusCodes.Status400BadRequest,
         };
-        return controller.Problem(detail: change.Reason, statusCode: status);
+        var result = controller.Problem(detail: change.Reason, statusCode: status);
+        if (change.Code is not null && result.Value is ProblemDetails problem)
+            problem.Extensions["code"] = change.Code.ToString();
+        return result;
     }
 }

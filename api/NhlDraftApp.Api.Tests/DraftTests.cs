@@ -11,7 +11,7 @@ public class DraftTests
     private const string Alexandre = "Alexandre";
     private const string EntryId = "entry-1";
     private const string DuplicateAlex = "Alex is already in the pooler list.";
-    private const string LockedReason = "The draft has started: poolers, order and settings are locked. Renaming is still allowed; reset clears all picks.";
+    private const string LockedReason = "The draft has started: poolers and order are locked. Renaming is still allowed; reset clears all picks.";
 
     private static readonly Settings DefaultSettings = new();
     private static readonly Settings CustomSettings = new(Rounds: 16, Cap: 90m, DefenseMin: 3, Goalies: 2, Teams: 2);
@@ -211,13 +211,11 @@ public class DraftTests
     {
         var draft = Started(Alex, Sam);
 
-        draft.UpdateSettings(CustomSettings).Status.Should().Be(ChangeStatus.Locked);
         draft.AddPooler(Max).Should().Be(new Change(ChangeStatus.Locked, LockedReason));
         draft.RemovePooler(draft.Poolers[1].Id).Status.Should().Be(ChangeStatus.Locked);
         draft.Reorder(ReversedIds(draft)).Status.Should().Be(ChangeStatus.Locked);
         draft.Shuffle(new Random(1)).Status.Should().Be(ChangeStatus.Locked);
 
-        draft.Settings.Should().Be(DefaultSettings);
         Names(draft).Should().Equal(Alex, Sam);
     }
 

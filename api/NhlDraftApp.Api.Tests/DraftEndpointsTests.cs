@@ -101,14 +101,14 @@ public sealed class DraftEndpointsTests : IDisposable
     }
 
     [Fact]
-    public async Task PutSettings_When_DraftStarted_Should_ReturnConflictWithReason()
+    public async Task PutSettings_When_DraftStartedAndPicksStillFit_Should_Apply()
     {
         SeedStartedDraft();
 
         var response = await Client.PutAsJsonAsync(SettingsRoute, CustomSettings);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await Reason(response)).Should().NotBeNullOrWhiteSpace();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetDraft()).Settings.Should().Be(CustomSettings);
     }
 
     [Fact]

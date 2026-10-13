@@ -9,23 +9,56 @@ public class Draft(DraftData? data = null)
 
     private readonly List<Pooler> poolers = data?.Poolers.ToList() ?? [];
     private readonly List<Pick> picks = data?.Picks.ToList() ?? [];
+    private readonly List<PoolEntry> pool = data?.Pool?.ToList() ?? [];
 
     public Settings Settings { get; private set; } = data?.Settings ?? new();
     public IReadOnlyList<Pooler> Poolers => poolers;
     public IReadOnlyList<Pick> Picks => picks;
     public bool Started => picks.Count > 0;
 
-    public DraftData ToData() => new(Settings, [.. poolers], [.. picks]);
+    public DraftData ToData() => new(Settings, [.. poolers], [.. picks], [.. pool]);
+
+    public PoolEntry? EntryIn(Guid poolerId, int round) =>
+        picks.Find(p => p.Fills(poolerId, round)) is { } pick ? Entry(pick.EntryId) : null;
+
+    public IReadOnlyList<PoolEntry?> EntriesOf(Guid poolerId, int? exceptRound = null) =>
+        [.. picks.Where(p => p.PoolerId == poolerId && p.Round != exceptRound).Select(p => Entry(p.EntryId))];
+
+    public Tally TallyOf(Guid poolerId) => Tally.Of(EntriesOf(poolerId));
 
     public Change UpdateSettings(Settings settings)
     {
-        if (Started)
-            return Change.Locked;
         if (settings.Problem() is { } problem)
             return Change.Invalid(problem);
         if (settings.MaxPoolers < poolers.Count)
             return Change.Invalid($"Maximum poolers cannot be below the {poolers.Count} poolers already added.");
+        if (MidDraftSettings.Misfit(this, settings) is { } misfit)
+            return Change.Invalid(misfit);
         Settings = settings;
+        return Change.Ok;
+    }
+
+    public Change Pick(Guid poolerId, int round, string entryId)
+    {
+        var pooler = poolers.Find(p => p.Id == poolerId);
+        if (pooler is null)
+            return Change.NotFound;
+        if (round < 1 || round > Settings.Rounds)
+            return Change.Invalid($"Round must be between 1 and {Settings.Rounds}.");
+        if (Entry(entryId) is not { } entry)
+            return Change.EntryNotFound;
+        if (PickRules.Check(this, pooler, round, entry) is { } refusal)
+            return Change.Refused(refusal);
+        picks.RemoveAll(p => p.Fills(poolerId, round));
+        picks.Add(new Pick(poolerId, round, entryId));
+        return Change.Ok;
+    }
+
+    public Change ClearPick(Guid poolerId, int round)
+    {
+        if (!poolers.Exists(p => p.Id == poolerId))
+            return Change.NotFound;
+        picks.RemoveAll(p => p.Fills(poolerId, round));
         return Change.Ok;
     }
 
@@ -84,6 +117,8 @@ public class Draft(DraftData? data = null)
         picks.Clear();
         return Change.Ok;
     }
+
+    private PoolEntry? Entry(string id) => pool.Find(e => e.Id == id);
 
     private bool ListsEveryPoolerOnce(IReadOnlyList<Guid> ids) =>
         ids.Count == poolers.Count && poolers.All(p => ids.Contains(p.Id));

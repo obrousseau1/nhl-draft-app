@@ -1,16 +1,17 @@
 @host = http://localhost:5190
 @poolerId = 00000000-0000-0000-0000-000000000000
+@entryId = id-from-the-pool
 
 # Writes return 200 with the whole draft. Errors are ProblemDetails (application/problem+json, message in "detail"):
-# 400 invalid, 404 unknown pooler, 409 locked, 403 cross-site write.
+# 400 invalid, 404 unknown pooler or entry, 409 locked, 422 pick refused by a rule, 403 cross-site write.
 
-### Draft: settings, poolers in draft order, picks, started
+### Draft: settings, poolers in draft order, picks, started, board (boxes + totals per pooler), currentPick
 GET {{host}}/api/draft
 
 ### Start a new draft: new file, keeps settings and poolers, no picks
 POST {{host}}/api/draft/new
 
-### Settings (rounds 1-50, cap up to 1000, counts 0-rounds, maxPoolers 2-30)
+### Settings (rounds 1-50, cap up to 1000, counts 0-rounds, maxPoolers 2-30); after the first pick, only if every pick still fits
 PUT {{host}}/api/draft/settings
 Content-Type: application/json
 
@@ -42,3 +43,12 @@ POST {{host}}/api/poolers/shuffle
 
 ### Clear all picks, keep settings and poolers
 POST {{host}}/api/draft/reset
+
+### Pick into a box (any empty box, or replace a filled one); 422 with the rule that refused it
+PUT {{host}}/api/picks/{{poolerId}}/1
+Content-Type: application/json
+
+{ "entryId": "{{entryId}}" }
+
+### Clear a box: the entry returns to the pool
+DELETE {{host}}/api/picks/{{poolerId}}/1
