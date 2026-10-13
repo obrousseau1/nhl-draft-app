@@ -32,3 +32,6 @@ Thumbs.db
 _claude_working/
 .claude/settings.local.json
 .codegraph/
+
+# Web app build output (built into the API)
+api/NhlDraftApp.Api/wwwroot/

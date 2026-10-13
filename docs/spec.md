@@ -430,13 +430,13 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
 - **Relative ProjectReference to `X:\nhl-fantasy-draft\src\NhlDraftKit.Core`** — any rename, move or signature change in the old repo (`KitReader.Read`, `Player`, `TeamRow`, `Teams.FromKit`) breaks this build. A fresh clone of this repo alone does not build.
 - **`KitReader` is owned by the other app** — it may evolve for season-prep needs (e.g. new required headers) and start rejecting kits this app could read.
 - **Pool snapshot (design D3)** — picks reference `PoolEntry.Id`; if Id generation changes between versions, an existing `draft.json` loses its picks' links.
-- **Comment-only `.tsx` stubs** — lint/typecheck/test must pass on files with no code; `vitest --passWithNoTests` hides a real "no tests" state once the user starts writing code.
 - **Dev port 5190 hard-coded in two places** (`launchSettings.json`, `vite.config.ts`).
 - **CI checks out the private `nhl-fantasy-draft` side by side** with a token secret; an expired token or a renamed repo turns every run red at checkout.
 - **JSON file + in-process lock assume one Azure instance** — scale-out would corrupt or split the draft.
 - **Every push to `main` deploys and restarts the Azure app** — safe only because restart restores state.
 - **Revision counter in `draft.json`** — Azure trusts it to order snapshots; a reset or a restored old file must never lower it, or every push is refused.
 - **Easy Auth now validates bearer tokens** — allowed audience and the Entra public-client flag are hand-set; a change in the portal silently stops sync (status turns failing).
+- **Static web assets in Development** — a test host in Development serves the project's real `wwwroot` (manifest), not its configured web root; hosting tests must run in another environment, and deleting `wwwroot` locally needs a full rebuild.
 
 ## Biggest risks
 
@@ -483,18 +483,18 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
     { "id": "EC-9", "description": "Replace and clear tests pass: cleared or replaced entry is searchable again; a refused pick leaves state unchanged.", "verified": false },
     { "id": "EC-10", "description": "Totals test passes: cap 104, 20 rounds, picks 12.5 C + 3.5 D → remaining 88.0, average 5.5 (88 ÷ (18 empty − 2 teams needed)), D 1, G 2, teams 2; average blank when only team picks remain.", "verified": false },
     { "id": "EC-11", "description": "Restart test passes: picks made, host restarted on the same data file, GET /api/draft returns identical picks, totals and current pick; writes go through a temp file then replace.", "verified": false },
-    { "id": "EC-12", "description": "Offline run: with `web/dist` built, `dotnet run --project api/NhlDraftApp.Api` alone serves the app at `/` with network disabled, and index.html references no external URL.", "verified": false },
+    { "id": "EC-12", "description": "Offline run: with the app built into `api/NhlDraftApp.Api/wwwroot`, `dotnet run --project api/NhlDraftApp.Api` alone serves the app at `/` with network disabled, and index.html references no external URL.", "verified": false },
     { "id": "EC-13", "description": "Search tests pass: 'stutzle' finds Stützle; picked entries hidden; position (incl. Team) and NHL team filters; eligible-only hides entries PickRules refuses; NoCapHit marker present.", "verified": false },
     { "id": "EC-14", "description": "Roster tests pass: picks grouped Forwards/Defensemen/Goalies/Teams with name, NHL team, cap hit and total cap; partial roster lists only existing picks.", "verified": false },
-    { "id": "EC-15", "description": "Frontend stubs: `src/*.ts(x)` contain comments only; in `web`, `pnpm run lint`, `pnpm run typeCheck` and `pnpm run test` exit 0.", "verified": false },
+    { "id": "EC-15", "description": "Frontend checks: in `web`, `pnpm run lint`, `pnpm run typeCheck` and `pnpm run test` exit 0 (the user's setup page and its tests replaced the comment-only stubs).", "verified": true },
     { "id": "EC-16", "description": "`dotnet build NhlDraftApp.slnx` exits 0 with no warnings and `dotnet test NhlDraftApp.slnx` passes (build implied).", "verified": false },
     { "id": "EC-17", "description": "Real kit `draftkit  Joueurs gardiens équipes - maj 2026-09-30.xlsx` imported through the running API yields 918 skaters, 93 goalies, 32 teams.", "verified": false },
     { "id": "EC-18", "description": "Complexity is low: no method over ~30 lines, nesting ≤ 3, controller actions only map HTTP ↔ domain (no rule logic in controllers), main pick path readable from the controller action into PickRules without other hops.", "verified": false },
     { "id": "EC-19", "description": "As lean as possible: no interface unless a test substitutes it with NSubstitute, no repository/mediator layer, no package beyond Core's ClosedXML, MSAL (+ its cache extension) and the test stack, no setting the specs do not name; clean-code skill audit on the new C# reports no Major finding.", "verified": false },
     { "id": "EC-20", "description": "Unit tests use xUnit, FluentAssertions and NSubstitute, and every test method is named Method_When_Condition_Should_Expectation with an underscore between each of the 5 sections, and repeated test values are private constants or fields (checked by grep `_When_[A-Za-z]+_Should_` over `api/NhlDraftApp.Api.Tests`).", "verified": false },
     { "id": "EC-21", "description": "GitHub Actions `dotnet` job builds and tests `NhlDraftApp.slnx` on every push and PR to main, with nhl-fantasy-draft checked out side by side; a green run is visible on GitHub.", "verified": true },
-    { "id": "EC-22", "description": "GitHub Actions `web` job runs pnpm lint, typeCheck and test on every push and PR to main; a failing step fails the run.", "verified": false },
-    { "id": "EC-23", "description": "The CI publish artifact contains the API and `wwwroot/index.html` from the built web app.", "verified": false },
+    { "id": "EC-22", "description": "GitHub Actions `web` job runs pnpm lint, typeCheck and test on every push and PR to main; a failing step fails the run.", "verified": true },
+    { "id": "EC-23", "description": "The CI publish artifact contains the API and `wwwroot/index.html` from the built web app.", "verified": true },
     { "id": "EC-24", "description": "Draft files live in config `Draft:DataFolder` (default `%LOCALAPPDATA%/NhlDraftApp`); endpoint tests prove the override is used.", "verified": true },
     { "id": "EC-25", "description": "On Azure, an anonymous request is redirected to login and a non-host account is denied; checked by hand in a private browser window.", "verified": false },
     { "id": "EC-26", "description": "A push to main with green CI deploys to Azure; picks made on Azure survive an app restart and the next deploy; a red CI run deploys nothing.", "verified": false },
@@ -582,3 +582,5 @@ The local app SHALL behave exactly as without sync when no Azure address is conf
 - **2026-10-05 — Build, shred 1** — endpoints moved from minimal API to `[ApiController]` controllers (user decision); routes, status codes and bodies unchanged, EC-18 reworded. Malformed JSON bodies now get ProblemDetails 400 from `[ApiController]`; domain refusals keep `{ reason }`.
 - **2026-10-05 — Build, shred 1** — EC-21 verified: GitHub Actions `dotnet` job green on PR run for 5906c84 (controllers commit). Core side-by-side checkout still to add in chunk 4.
 - **2026-10-05 — PR #8 review** — draft-setup spec revised: max poolers (default 12, 2–30), settings bounds, exact refusal messages, "Settings change mid-draft" (moved to chunk 3, EC-33), "Start a new draft" (one file per draft). Errors are now ProblemDetails, not `{ reason }`. EC-3 and EC-24 reworded; EC-31 (browser guards) and EC-32 (per-draft files, save-then-swap, corrupt-file recovery) added and verified (79 tests green, 0 warnings).
+- **2026-10-06 — Build, shred 2** — EC-15 verified (lint/typeCheck/test exit 0 on comment-only `main.tsx`/`App.tsx`). EC-12: `dotnet run` alone serves the built app and its `index.html` references no external URL, but the network-off run is a manual check for the user, so it stays false. EC-22/EC-23: workflow written and `dotnet publish` locally contains `wwwroot/index.html`; both stay false until the branch's CI run is green. 84 .NET tests green with and without a built app.
+- **2026-10-12 — Chunk 2 review** — EC-15 reworded: `src` now holds the user's setup page and 45 tests instead of comment-only stubs; lint, typeCheck and test exit 0. EC-22 and EC-23 verified: CI run 38301713737 green (`web`, `dotnet`, `publish`), and its `app` artifact holds `NhlDraftApp.Api.dll` and `wwwroot/index.html`.
