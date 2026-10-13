@@ -11,12 +11,14 @@ export default defineConfig({
   },
   server: {
     // Calls to /api/... go to the C# API, so fetch('/api/draft') just works in `pnpm dev`.
-    // Origin is rewritten too: the API refuses writes whose Origin differs from its own host.
+    // Our own Origin is rewritten too: the API refuses writes whose Origin differs from its host. Foreign ones stay refused.
     proxy: {
       '/api': {
         target: 'http://localhost:5190',
         changeOrigin: true,
-        configure: (proxy) => proxy.on('proxyReq', (req) => req.setHeader('origin', 'http://localhost:5190')),
+        configure: (proxy) => proxy.on('proxyReq', (req, incoming) => {
+          if (req.getHeader('origin') === `http://${incoming.headers.host}`) req.setHeader('origin', 'http://localhost:5190')
+        }),
       },
     },
   },

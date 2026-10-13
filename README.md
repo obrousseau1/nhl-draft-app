@@ -32,7 +32,7 @@ Full specs: [docs/intent.md](docs/intent.md) (the problem), [docs/spec.md](docs/
 |---|---|---|
 | API | .NET 10 ASP.NET Core controllers (`api/NhlDraftApp.Api`), one per resource | All draft rules live in tested C#; controller actions only map HTTP to the domain. |
 | Storage | One JSON file per draft (newest = current), written to a temp file and then swapped in | It's one ~100 KB document, so no database is needed. A crash never leaves a half-written file, and a new draft never overwrites the previous one. |
-| Frontend | React 19 + TypeScript + Vite (`web/`), oxlint, Vitest | Written by hand as a learning project; see [web/GUIDE.md](web/GUIDE.md). |
+| Frontend | React 19 + TypeScript + Vite (`web/`), oxlint, Vitest | Written by hand as a learning project. |
 | XLSX parsing | `NhlDraftKit.Core` from [nhl-fantasy-draft](https://github.com/obrousseau1/nhl-fantasy-draft) via relative project reference (planned, #4) | Already reads this exact kit. |
 | Tests | xUnit, FluentAssertions, NSubstitute | Test names follow `Method_When_Condition_Should_Expectation`. |
 | CI/CD | GitHub Actions; Azure App Service (planned) | Azure access limited to the host by Easy Auth. |
@@ -65,7 +65,7 @@ pnpm run build                                   # builds into api/NhlDraftApp.A
 
 **Draft night (offline):** run `pnpm run build` once, then only `dotnet run --project api/NhlDraftApp.Api` and open http://localhost:5190. The API serves the built app, so no internet and no second terminal are needed.
 
-**Frontend is hand-written:** `web/src` starts empty on purpose. [web/GUIDE.md](web/GUIDE.md) holds every step, concept and suggested file.
+**Frontend is hand-written** as a learning project.
 
 Try the endpoints with [NhlDraftApp.Api.http](api/NhlDraftApp.Api/NhlDraftApp.Api.http) (VS Code REST Client, Rider or Visual Studio).
 

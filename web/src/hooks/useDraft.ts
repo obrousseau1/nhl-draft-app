@@ -11,15 +11,17 @@ type DraftAction =
   {type:'loaded'; draft: DraftView } |
   {type:'failed'; message: string }
 
+export type ApiOutcome = 'ok' | 'refused';
+
 export type DraftActions = {
-  addPooler: (name: string) => Promise<void>;
-  renamePooler: (id: string, name: string) => Promise<void>;
-  removePooler: (id: string) => Promise<void>;
-  reorder: (ids: string[]) => Promise<void>;
-  shuffle: () => Promise<void>;
-  updateSettings: (settings: Settings) => Promise<void>;
-  reset: () => Promise<void>;
-  startNew: () => Promise<void>;
+  addPooler: (name: string) => Promise<ApiOutcome>;
+  renamePooler: (id: string, name: string) => Promise<ApiOutcome>;
+  removePooler: (id: string) => Promise<ApiOutcome>;
+  reorder: (ids: string[]) => Promise<ApiOutcome>;
+  shuffle: () => Promise<ApiOutcome>;
+  updateSettings: (settings: Settings) => Promise<ApiOutcome>;
+  reset: () => Promise<ApiOutcome>;
+  startNew: () => Promise<ApiOutcome>;
 };
 
 export type UseDraft = DraftActions & { draftState: DraftStatus};
@@ -36,10 +38,10 @@ export const draftReducer = (draftState: DraftStatus, action: DraftAction) : Dra
 
 export default function useDraft(): UseDraft {
   const [draftState, dispatch] = useReducer(draftReducer, {status: 'loading'});
-  const callApi = (call: Promise<DraftView>) => {
+  const callApi = (call: Promise<DraftView>): Promise<ApiOutcome> => {
 
-    return call.then(draft => dispatch({ type: 'loaded', draft }))
-      .catch((e: Error) => dispatch({ type: 'failed', message: e.message }))
+    return call.then(draft => { dispatch({ type: 'loaded', draft }); return 'ok' as const })
+      .catch((e: Error) => { dispatch({ type: 'failed', message: e.message }); return 'refused' as const })
   }
 
   useEffect(() => {

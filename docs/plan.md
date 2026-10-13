@@ -17,11 +17,11 @@ The host needs one offline board that tracks every pooler's picks, cap and roste
 
 ### 2. Add the web scaffold, offline hosting and README ([#2](https://github.com/obrousseau1/nhl-draft-app/issues/2))
 
-- **Scope** — `web/` (`package.json`, `index.html`, `vite.config.ts`, `tsconfig*.json`, `.oxlintrc.json`, `src/test-setup.ts` real; `src/main.tsx`, `src/App.tsx` comment-only pointers; `web/GUIDE.md` = all suggested files, steps and concepts), `Hosting/WebAppHosting.cs` serving `wwwroot` with SPA fallback, Vite building into `api/NhlDraftApp.Api/wwwroot`, CI `web` + `publish` jobs, `README.md`
+- **Scope** — `web/` (`package.json`, `index.html`, `vite.config.ts`, `tsconfig*.json`, `.oxlintrc.json`, `src/test-setup.ts` real; `src/` holds the user's setup page (poolers, settings, confirm dialogs, error banner) and its tests), `Hosting/WebAppHosting.cs` serving `wwwroot` with SPA fallback, Vite building into `api/NhlDraftApp.Api/wwwroot`, CI `web` + `publish` jobs, `README.md`
 - **Ships alone because** — user's React starting point against chunk 1's live API; API still runs without `dist`
 - **Coverage** — `pnpm run lint`, `pnpm run typeCheck`, `pnpm run test` in `web`; endpoint test that `/` serves index from a temp dist; manual run with network off; green Actions run, publish artifact holds `wwwroot/index.html`
 - **Specs** — draft-board: Works offline; deployment: Continuous integration (web part)
-- **Risk / brittle** — comment-only stubs (`--passWithNoTests`), port 5190 in two places, Risk 4 (draft night needs internet or two terminals)
+- **Risk / brittle** — port 5190 in two places, Risk 4 (draft night needs internet or two terminals)
 - **Exit conditions** — EC-12, EC-15, EC-22, EC-23
 
 ### 3. Add pick rules, snake order, totals and picking ([#3](https://github.com/obrousseau1/nhl-draft-app/issues/3))
@@ -30,7 +30,7 @@ The host needs one offline board that tracks every pooler's picks, cap and roste
 - **Ships alone because** — additive on chunk 1; riskiest logic lands early
 - **Coverage** — unit test per pick-rules and draft-board scenario, endpoint tests (422 ProblemDetails), restart test on the same data file
 - **Specs** — pick-rules: all 6 requirements; draft-setup: Settings change mid-draft (from PR #8 review); draft-board: Board grid, Snake order current pick, Any empty box can be filled, Replace or clear a pick, Pooler totals, Draft survives restarts
-- **Risk / brittle** — Risk 1 (reachability corner cases: replacing a G/Team/D box, last round); visible as a refused legal pick or accepted illegal one in tests
+- **Risk / brittle** — Risk 1 (reachability corner cases: replacing a G/Team/D box, last round); visible as a refused legal pick or accepted illegal one in tests; `SettingsForm` disables every field once started — lift `disabled={isDraftStarted}` with "Settings change mid-draft"
 - **Exit conditions** — EC-5, EC-6, EC-7, EC-8, EC-9, EC-10, EC-11
 
 ### 4. Import the Draft Kit through NhlDraftKit.Core ([#4](https://github.com/obrousseau1/nhl-draft-app/issues/4))
@@ -85,3 +85,4 @@ EC-16 (build + tests), EC-18 (complexity), EC-19 (lean + clean-code audit), EC-2
 - **2026-10-05 — Build, shred 1** — built as planned; `Pick` record exists already (needed for the lock), pool entries left to chunks 3 and 4.
 - **2026-10-05 — PR #8 review** — chunk 1 grew: same-origin write guard, AllowedHosts, IDraftFile driver, one file per draft + `POST /api/draft/new`, MaxPoolers, ProblemDetails errors, CI on every branch push. Chunk 3 gains "Settings change mid-draft"; chunk 6 gains the `main` deploy guard and `AllowedHosts`/`Draft__DataFolder` app settings.
 - **2026-10-06 — Build, shred 2** — no copy step: Vite builds into the API's `wwwroot`, so `dotnet run` and `dotnet publish` both pick it up. All frontend suggestions moved from source comments into one `web/GUIDE.md` (user request). Hosting tests run in a "Testing" environment, since Development serves the project's real `wwwroot` through the static-web-assets manifest.
+- **2026-10-13 — PR #12 review** — chunk 2 grew: `src` holds the user's setup page and its tests instead of comment-only stubs. `web/GUIDE.md` stays local, untracked.
